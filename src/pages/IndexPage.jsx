@@ -33,7 +33,6 @@ export default function IndexPage({ entries }) {
           >
             List
           </button>
-          <span className="sep">,</span>
           <button
             className={view === "images" ? "active" : ""}
             onClick={() => setView("images")}
@@ -43,16 +42,14 @@ export default function IndexPage({ entries }) {
         </div>
 
         <div className="nav-group">
-          {types.map((t, i) => (
-            <span key={t}>
-              {i > 0 && <span className="sep">,</span>}
-              <button
-                className={typeFilter === t ? "active" : ""}
-                onClick={() => setTypeFilter(t)}
-              >
-                {t === "all" ? "All" : t}
-              </button>
-            </span>
+          {types.map((t) => (
+            <button
+              key={t}
+              className={typeFilter === t ? "active" : ""}
+              onClick={() => setTypeFilter(t)}
+            >
+              {t === "all" ? "All" : t}
+            </button>
           ))}
         </div>
 

@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase.js";
 
-export default function TopNav() {
+export default function TopNav({ syncStatus }) {
   return (
     <header className="topbar">
       <NavLink to="/" className="wordmark" end>
@@ -13,17 +13,22 @@ export default function TopNav() {
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
           Index
         </NavLink>
+        <span className="sep">,</span>
+        <NavLink to="/new" className={({ isActive }) => (isActive ? "active" : "")}>
+          New entry
+        </NavLink>
+        <span className="sep">,</span>
         <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
           About
         </NavLink>
       </nav>
 
       <div className="topbar-right">
-        <NavLink to="/new" className={({ isActive }) => (isActive ? "active" : "")}>
-          New Entry
-        </NavLink>
+        <span className={`sync-status ${syncStatus}`}>
+          {syncStatus === "live" ? "synced" : syncStatus === "error" ? "sync error" : "connecting"}
+        </span>
         <button className="link-btn" onClick={() => signOut(auth)}>
-          Sign Out
+          Sign out
         </button>
       </div>
     </header>
