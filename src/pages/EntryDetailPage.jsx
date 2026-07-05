@@ -51,7 +51,11 @@ export default function EntryDetailPage({ entries }) {
   return (
     <main className="entry-detail">
       <div className="entry-detail-meta">
-        <span>{entry.type || "—"}</span>
+        {entry.type ? (
+          <Link to={`/?type=${encodeURIComponent(entry.type)}`}>{entry.type}</Link>
+        ) : (
+          <span>—</span>
+        )}
         <span>{fullDate(entry.createdAt)}</span>
         <span>{entry.author?.name || "Unknown"}</span>
       </div>
@@ -76,7 +80,14 @@ export default function EntryDetailPage({ entries }) {
       {entry.notes && <p className="entry-detail-notes">{entry.notes}</p>}
 
       {entry.tags && entry.tags.length > 0 && (
-        <p className="entry-detail-tags">{entry.tags.join(", ")}</p>
+        <p className="entry-detail-tags">
+          {entry.tags.map((tag, i) => (
+            <span key={tag}>
+              {i > 0 && ", "}
+              <Link to={`/tag/${encodeURIComponent(tag)}`}>{tag}</Link>
+            </span>
+          ))}
+        </p>
       )}
 
       {relatedEntries.length > 0 && (
