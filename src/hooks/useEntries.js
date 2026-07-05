@@ -23,7 +23,14 @@ export function useEntries(enabled) {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+        setEntries(
+          snap.docs.map((d) => {
+            const data = d.data();
+            // Older entries stored a single string; newer ones store an array.
+            const types = Array.isArray(data.type) ? data.type : data.type ? [data.type] : [];
+            return { id: d.id, ...data, types };
+          })
+        );
         setLoading(false);
       },
       (err) => {

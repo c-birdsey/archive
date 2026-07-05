@@ -15,14 +15,14 @@ export default function IndexPage({ entries }) {
   }
 
   const types = useMemo(() => {
-    const set = new Set(entries.map((e) => e.type).filter(Boolean));
+    const set = new Set(entries.flatMap((e) => e.types || []));
     return ["all", ...[...set].sort()];
   }, [entries]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return entries
-      .filter((e) => typeFilter === "all" || e.type === typeFilter)
+      .filter((e) => typeFilter === "all" || (e.types || []).includes(typeFilter))
       .filter((e) => {
         if (!q) return true;
         const hay = [e.title, e.notes, e.author?.name, ...(e.tags || [])].join(" ").toLowerCase();

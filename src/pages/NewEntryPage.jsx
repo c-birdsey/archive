@@ -13,7 +13,7 @@ export default function NewEntryPage({ entries, user }) {
   const isEditing = Boolean(id);
 
   const [title, setTitle] = useState("");
-  const [type, setType] = useState([]); // single-value array, reuses CreatableSelect
+  const [type, setType] = useState([]);
   const [tags, setTags] = useState([]);
   const [link, setLink] = useState("");
   const [notes, setNotes] = useState("");
@@ -40,7 +40,7 @@ export default function NewEntryPage({ entries, user }) {
       }
       const data = snap.data();
       setTitle(data.title || "");
-      setType(data.type ? [data.type] : []);
+      setType(Array.isArray(data.type) ? data.type : data.type ? [data.type] : []);
       setTags(data.tags || []);
       setLink(data.link || "");
       setNotes(data.notes || "");
@@ -65,7 +65,7 @@ export default function NewEntryPage({ entries, user }) {
   }, [id, isEditing]);
 
   const typeOptions = useMemo(() => {
-    const set = new Set(entries.map((e) => e.type).filter(Boolean));
+    const set = new Set(entries.flatMap((e) => e.types || []));
     return [...set].sort().map((t) => ({ value: t, label: t }));
   }, [entries]);
 
@@ -148,7 +148,7 @@ export default function NewEntryPage({ entries, user }) {
 
       const payload = {
         title: title.trim(),
-        type: type[0] || "",
+        type,
         tags,
         link: link.trim(),
         notes: notes.trim(),
@@ -200,19 +200,19 @@ export default function NewEntryPage({ entries, user }) {
           />
         </label>
 
-        <label className="field">
+        <div className="field">
           <span>Type</span>
           <CreatableSelect
             options={typeOptions}
             selected={type}
             onChange={setType}
-            multiple={false}
+            multiple
             allowCreate
             placeholder="Search or add a type…"
           />
-        </label>
+        </div>
 
-        <label className="field">
+        <div className="field">
           <span>Tags</span>
           <CreatableSelect
             options={tagOptions}
@@ -222,7 +222,7 @@ export default function NewEntryPage({ entries, user }) {
             allowCreate
             placeholder="Search or add tags…"
           />
-        </label>
+        </div>
 
         <div className="field">
           <span>Images</span>
@@ -277,7 +277,7 @@ export default function NewEntryPage({ entries, user }) {
           />
         </label>
 
-        <label className="field">
+        <div className="field">
           <span>Related entries</span>
           <CreatableSelect
             options={relatedOptions}
@@ -287,7 +287,7 @@ export default function NewEntryPage({ entries, user }) {
             allowCreate={false}
             placeholder="Search entries by title…"
           />
-        </label>
+        </div>
 
         {error && <p className="auth-error">{error}</p>}
 

@@ -51,8 +51,15 @@ export default function EntryDetailPage({ entries }) {
   return (
     <main className="entry-detail">
       <div className="entry-detail-meta">
-        {entry.type ? (
-          <Link to={`/?type=${encodeURIComponent(entry.type)}`}>{entry.type}</Link>
+        {entry.types && entry.types.length > 0 ? (
+          <span>
+            {entry.types.map((t, i) => (
+              <span key={t}>
+                {i > 0 && ", "}
+                <Link to={`/?type=${encodeURIComponent(t)}`}>{t}</Link>
+              </span>
+            ))}
+          </span>
         ) : (
           <span>—</span>
         )}

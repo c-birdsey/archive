@@ -23,7 +23,7 @@ export function ListView({ entries, onOpen }) {
               className="list-row"
               onClick={() => onOpen(entry.id)}
             >
-              <span className="row-type">{entry.type || "—"}</span>
+              <span className="row-type">{entry.types && entry.types.length > 0 ? entry.types.join(", ") : "—"}</span>
               <span className="row-title-cell">
                 <span className="row-title">{entry.title}</span>
                 {entry.tags && entry.tags.length > 0 && (
@@ -60,7 +60,7 @@ export function ImagesView({ entries, onOpen }) {
           )}
           <p className="tile-title">{entry.title}</p>
           <p className="tile-meta">
-            {entry.type || "—"}, {yearOf(entry.createdAt)}
+            {entry.types && entry.types.length > 0 ? entry.types.join(", ") : "—"}, {yearOf(entry.createdAt)}
           </p>
         </button>
       ))}

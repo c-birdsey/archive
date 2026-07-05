@@ -4,7 +4,7 @@ import { ListView, ImagesView } from "../components/EntryViews.jsx";
 
 export default function TagIndexPage({ entries }) {
   const { tag } = useParams();
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("images");
   const navigate = useNavigate();
 
   const decodedTag = decodeURIComponent(tag);
