@@ -32,8 +32,13 @@ export default function EntryDetailPage({ entries }) {
     setDeleting(true);
     try {
       await deleteDoc(doc(db, "entries", entry.id));
-      if (entry.imageStoragePath) {
-        try { await deleteObject(ref(storage, entry.imageStoragePath)); }
+      const paths = Array.isArray(entry.images) && entry.images.length > 0
+        ? entry.images.map((img) => img.path).filter(Boolean)
+        : entry.imageStoragePath
+          ? [entry.imageStoragePath]
+          : [];
+      for (const path of paths) {
+        try { await deleteObject(ref(storage, path)); }
         catch (e) { console.warn("Couldn't delete stored image:", e.message); }
       }
       navigate("/");
@@ -51,7 +56,14 @@ export default function EntryDetailPage({ entries }) {
         <span>{entry.author?.name || "Unknown"}</span>
       </div>
 
-      {entry.imageUrl && <img className="entry-detail-image" src={entry.imageUrl} alt="" />}
+      {(Array.isArray(entry.images) && entry.images.length > 0
+        ? entry.images
+        : entry.imageUrl
+          ? [{ url: entry.imageUrl }]
+          : []
+      ).map((img, i) => (
+        <img key={img.path || img.url || i} className="entry-detail-image" src={img.url} alt="" />
+      ))}
 
       <h1 className="entry-detail-title">{entry.title}</h1>
 

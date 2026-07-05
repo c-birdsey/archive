@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   addDoc, collection, doc, getDoc, serverTimestamp, updateDoc,
@@ -18,10 +18,13 @@ export default function NewEntryPage({ entries, user }) {
   const [link, setLink] = useState("");
   const [notes, setNotes] = useState("");
   const [related, setRelated] = useState([]); // array of entry ids
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState(null);
-  const [existingImageUrl, setExistingImageUrl] = useState(null);
-  const [existingImagePath, setExistingImagePath] = useState(null);
+
+  // Each item: { key, url (preview or existing download URL), file? (new upload), path? (existing storage path) }
+  // Order matters — images[0] is the primary/cover image.
+  const [images, setImages] = useState([]);
+  const [removedPaths, setRemovedPaths] = useState([]); // existing storage paths to delete on save
+  const dragIndex = useRef(null);
+
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
@@ -42,8 +45,21 @@ export default function NewEntryPage({ entries, user }) {
       setLink(data.link || "");
       setNotes(data.notes || "");
       setRelated(data.relatedIds || []);
-      setExistingImageUrl(data.imageUrl || null);
-      setExistingImagePath(data.imageStoragePath || null);
+
+      if (Array.isArray(data.images) && data.images.length > 0) {
+        setImages(
+          data.images.map((img, i) => ({
+            key: img.path || img.url || `existing-${i}`,
+            url: img.url,
+            path: img.path || null,
+          }))
+        );
+      } else if (data.imageUrl) {
+        // Legacy entries saved before multi-image support
+        setImages([
+          { key: data.imageStoragePath || data.imageUrl, url: data.imageUrl, path: data.imageStoragePath || null },
+        ]);
+      }
       setLoadingExisting(false);
     })();
   }, [id, isEditing]);
@@ -65,11 +81,41 @@ export default function NewEntryPage({ entries, user }) {
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [entries, id]);
 
-  function handleImageChange(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    setImageFile(file);
-    setImagePreview(URL.createObjectURL(file));
+  function handleFilesChange(e) {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+    const newItems = files.map((file) => ({
+      key: `new-${file.name}-${file.size}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      url: URL.createObjectURL(file),
+      file,
+    }));
+    setImages((prev) => [...prev, ...newItems]);
+    e.target.value = ""; // allow re-selecting the same file again later
+  }
+
+  function removeImage(key) {
+    setImages((prev) => {
+      const target = prev.find((i) => i.key === key);
+      if (target?.path) setRemovedPaths((r) => [...r, target.path]);
+      return prev.filter((i) => i.key !== key);
+    });
+  }
+
+  function handleDragStart(index) {
+    dragIndex.current = index;
+  }
+  function handleDragOver(e) {
+    e.preventDefault();
+  }
+  function handleDrop(index) {
+    setImages((prev) => {
+      if (dragIndex.current === null || dragIndex.current === index) return prev;
+      const arr = [...prev];
+      const [moved] = arr.splice(dragIndex.current, 1);
+      arr.splice(index, 0, moved);
+      return arr;
+    });
+    dragIndex.current = null;
   }
 
   async function handleSubmit(e) {
@@ -82,20 +128,22 @@ export default function NewEntryPage({ entries, user }) {
     setError("");
 
     try {
-      let imageUrl = existingImageUrl;
-      let imageStoragePath = existingImagePath;
-
-      if (imageFile) {
-        const path = `entries/${user.uid}/${Date.now()}-${imageFile.name}`;
-        const storageRef = ref(storage, path);
-        await uploadBytes(storageRef, imageFile);
-        imageUrl = await getDownloadURL(storageRef);
-        imageStoragePath = path;
-
-        if (existingImagePath) {
-          try { await deleteObject(ref(storage, existingImagePath)); }
-          catch (e) { console.warn("Couldn't delete replaced image:", e.message); }
+      // Upload any new files, in the current order, then delete removed ones.
+      const uploadedImages = [];
+      for (const img of images) {
+        if (img.file) {
+          const path = `entries/${user.uid}/${Date.now()}-${Math.random().toString(36).slice(2)}-${img.file.name}`;
+          const storageRef = ref(storage, path);
+          await uploadBytes(storageRef, img.file);
+          const url = await getDownloadURL(storageRef);
+          uploadedImages.push({ url, path });
+        } else {
+          uploadedImages.push({ url: img.url, path: img.path || null });
         }
+      }
+      for (const path of removedPaths) {
+        try { await deleteObject(ref(storage, path)); }
+        catch (err) { console.warn("Couldn't delete removed image:", err.message); }
       }
 
       const payload = {
@@ -105,8 +153,11 @@ export default function NewEntryPage({ entries, user }) {
         link: link.trim(),
         notes: notes.trim(),
         relatedIds: related,
-        imageUrl: imageUrl || null,
-        imageStoragePath: imageStoragePath || null,
+        images: uploadedImages,
+        // Mirrored for backward compatibility with anything still reading
+        // the old single-image fields (e.g. entries created before this).
+        imageUrl: uploadedImages[0]?.url || null,
+        imageStoragePath: uploadedImages[0]?.path || null,
         updatedAt: serverTimestamp(),
       };
 
@@ -173,13 +224,38 @@ export default function NewEntryPage({ entries, user }) {
           />
         </label>
 
-        <label className="field">
-          <span>Image</span>
-          <input type="file" accept="image/*" onChange={handleImageChange} />
-          {(imagePreview || existingImageUrl) && (
-            <img className="field-image-preview" src={imagePreview || existingImageUrl} alt="" />
+        <div className="field">
+          <span>Images</span>
+          {images.length > 0 && (
+            <div className="image-manager">
+              {images.map((img, i) => (
+                <div
+                  key={img.key}
+                  className={`image-item${i === 0 ? " primary" : ""}`}
+                  draggable
+                  onDragStart={() => handleDragStart(i)}
+                  onDragOver={handleDragOver}
+                  onDrop={() => handleDrop(i)}
+                >
+                  <img src={img.url} alt="" />
+                  {i === 0 && <span className="primary-tag">Primary</span>}
+                  <button
+                    type="button"
+                    className="image-remove"
+                    onClick={() => removeImage(img.key)}
+                    aria-label="Remove image"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
-        </label>
+          <input type="file" accept="image/*" multiple onChange={handleFilesChange} />
+          {images.length > 1 && (
+            <p className="field-hint">Drag to reorder — the first image is the cover.</p>
+          )}
+        </div>
 
         <label className="field">
           <span>Link</span>

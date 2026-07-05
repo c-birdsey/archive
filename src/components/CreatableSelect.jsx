@@ -93,12 +93,27 @@ export default function CreatableSelect({
       {open && (filtered.length > 0 || showCreate) && (
         <div className="creatable-menu">
           {filtered.map((o) => (
-            <button type="button" key={o.value} className="creatable-option" onClick={() => choose(o.value)}>
+            <button
+              type="button"
+              key={o.value}
+              className="creatable-option"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                choose(o.value);
+              }}
+            >
               {o.label}
             </button>
           ))}
           {showCreate && (
-            <button type="button" className="creatable-option creatable-new" onClick={() => choose(query.trim())}>
+            <button
+              type="button"
+              className="creatable-option creatable-new"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                choose(query.trim());
+              }}
+            >
               Add “{query.trim()}”
             </button>
           )}

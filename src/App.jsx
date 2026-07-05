@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth.js";
 import { useEntries } from "./hooks/useEntries.js";
 import { ALLOWED_EMAILS } from "./firebase-config.js";
@@ -18,6 +18,7 @@ export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
   const [unlocked, setUnlocked] = useState(isLobbyUnlocked());
   const user = useAuth();
+  const location = useLocation();
 
   useEffect(() => {
     function onResize() {
@@ -26,6 +27,15 @@ export default function App() {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
+
+  // Prevents a stray text-input caret from lingering on screen after the
+  // element that owned it unmounts — e.g. leaving a page with a focused
+  // search box, or the auth gate swapping views on sign-in/sign-out.
+  useEffect(() => {
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  }, [location.pathname, user]);
 
   const isAllowed = user && ALLOWED_EMAILS.includes(user.email);
   const { entries } = useEntries(Boolean(isAllowed));
@@ -38,7 +48,7 @@ export default function App() {
 
   return (
     <div className="page">
-      <TopNav syncStatus="live" />
+      <TopNav />
       <Routes>
         <Route path="/" element={<IndexPage entries={entries} />} />
         <Route path="/about" element={<AboutPage />} />
