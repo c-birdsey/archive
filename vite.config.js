@@ -6,6 +6,6 @@ import react from "@vitejs/plugin-react";
 // github.com/yourname/archive, base should be "/archive/".
 // If you deploy to a custom domain instead, set this back to "/".
 export default defineConfig({
-  plugins: [react()],
-  base: "/archive/",
+    plugins: [react()],
+    base: "/",
 });
