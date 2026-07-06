@@ -25,7 +25,7 @@ export default function PasscodeGate({ onUnlock }) {
   return (
     <div className="lobby">
       <form className="lobby-card" onSubmit={submit}>
-        <p className="wordmark">Archive</p>
+        <p className="wordmark">Register</p>
         <input
           type="password"
           value={value}

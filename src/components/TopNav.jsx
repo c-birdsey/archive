@@ -6,7 +6,7 @@ export default function TopNav() {
   return (
     <header className="topbar">
       <NavLink to="/" className="wordmark" end>
-        Archive
+        Register
       </NavLink>
 
       <nav className="page-nav">

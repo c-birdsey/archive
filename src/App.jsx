@@ -43,7 +43,7 @@ export default function App() {
 
   if (isMobile) return <MobileBlock />;
   if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
-  if (user === undefined) return <div className="lobby"><p className="wordmark">Archive</p></div>;
+  if (user === undefined) return <div className="lobby"><p className="wordmark">Register</p></div>;
   if (!user) return <SignInGate />;
   if (!isAllowed) return <SignInGate deniedUser={user} />;
 

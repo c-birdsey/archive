@@ -17,7 +17,7 @@ export default function SignInGate({ deniedUser }) {
   return (
     <div className="lobby">
       <div className="lobby-card">
-        <p className="wordmark">Archive</p>
+        <p className="wordmark">Register</p>
 
         {deniedUser ? (
           <>
