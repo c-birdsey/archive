@@ -20,9 +20,7 @@ export default function AboutPage() {
       </p>
       <p>
         Register is organized by Calder Birdsey and Thomas Chen. It is a
-        working document, not intended as a curated, aesthetic object. What's
-        here reflects an ongoing process of collecting, not a finished
-        argument.
+        working document, not intended as a curated, aesthetic object, but rather representative of an ongoing process.
       </p>
       <p className="about-version">V1.2 | Published July 2026</p>
     </main>
