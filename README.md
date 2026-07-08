@@ -1,9 +1,10 @@
 # Archive — shared reference catalog
 
-A React app (Vite) backed by Firebase, deployed to GitHub Pages. Everyone
-on the allowlist signs in with Google and reads/writes the same shared
-collection of entries — you add something, Thomas sees it immediately,
-and vice versa, with authorship attached to each entry.
+A React app (Vite) backed by Firebase, deployed to GitHub Pages at
+`archive.calderbirdsey.com`. Everyone on the allowlist signs in with
+Google and reads/writes the same shared collection of entries — you
+add something, Thomas sees it immediately, and vice versa, with
+authorship attached to each entry.
 
 Visual direction: white ground, one typeface (Inter), typographic index
 with letter-group dividers, List/Images toggle. No cards, no borders,
@@ -30,9 +31,9 @@ There are two separate gates, and they are not equally strong:
    data — the app-side check is just UX.
 
 If you need the passcode itself to be real security (not just a lobby
-deterrent), that requires moving the check into a Cloud Function, which
-needs the Blaze (pay-as-you-go) Firebase plan. Ask if you want that —
-it's a bigger infrastructure step than what's built here.
+deterrent), that requires moving the check into a Cloud Function. Ask
+if you want that — it's a bigger infrastructure step than what's built
+here.
 
 ## 1. Create the Firebase project
 
@@ -51,7 +52,8 @@ nearby region.
 
 ## 4. Enable Storage
 
-**Build → Storage → Get started.** Production mode, same region.
+**Build → Storage → Get started.** Requires the Blaze (pay-as-you-go)
+plan — already the case for this project. Production mode, same region.
 
 ## 5. Security rules — this is what actually locks the archive down
 
@@ -130,11 +132,12 @@ Skip Firebase Hosting. Copy the `firebaseConfig` object.
 - `LOBBY_PASSCODE` — the shared passcode for the lobby gate (see the
   access model note above about what this does and doesn't protect).
 
-## 8. Authorize your GitHub Pages domain
+## 8. Authorize your sign-in domains
 
-**Authentication → Settings → Authorized domains → Add domain** →
-`yourusername.github.io`. Without this, sign-in fails with
-`auth/unauthorized-domain`, which the app will show you directly.
+**Authentication → Settings → Authorized domains → Add domain.** Add
+both your GitHub Pages domain (or custom domain, if you're using one —
+see below) and `localhost` for local dev. Without this, sign-in fails
+with `auth/unauthorized-domain`, which the app will show you directly.
 
 ## 9. Local development
 
@@ -143,22 +146,44 @@ npm install
 npm run dev
 ```
 
-Google sign-in popups work on `localhost`; add `localhost` to the
-authorized domains list if you hit the same error as above.
-
 ## 10. Deploy to GitHub Pages
 
-1. In `vite.config.js`, set `base` to match your repo name exactly,
-   e.g. `base: "/archive/"` for `github.com/you/archive`.
-2. Push this project to a GitHub repo.
-3. **Settings → Pages → Source → GitHub Actions.**
-4. The included workflow (`.github/workflows/deploy.yml`) builds and
+This repo is deployed at a **custom domain** (`archive.calderbirdsey.com`),
+not the default `username.github.io/repo` subpath, which is why
+`vite.config.js` has `base: "/"` rather than a repo-name subpath. If
+you fork this to run at the default subpath instead, you'd need to
+change `base` back to `/your-repo-name/` and remove `public/CNAME`.
+
+1. Push this project to a GitHub repo.
+2. **Settings → Pages → Source → GitHub Actions.**
+3. The included workflow (`.github/workflows/deploy.yml`) builds and
    deploys automatically on every push to `main`. First deploy takes a
    couple of minutes; check the **Actions** tab for progress.
+4. For a custom domain: add a CNAME record at your DNS provider pointing
+   the subdomain at `yourusername.github.io` (**DNS-only, not proxied**,
+   if you're on Cloudflare — a proxied/orange-cloud record breaks GitHub
+   Pages' certificate provisioning). `public/CNAME` holds the domain
+   name itself and Vite copies it into the build automatically; set it
+   again in **Settings → Pages → Custom domain**.
+5. GitHub Pages serves static files with no server-side routing, but
+   this app uses real URL paths (`BrowserRouter`, not hash routing) —
+   so a direct hit or hard refresh on anything but `/` (e.g. `/entry/abc123`)
+   would 404 without help. `public/404.html` + the redirect-restore logic
+   at the top of `src/main.jsx` handle this: GitHub Pages serves
+   `404.html` for any unmatched path, which stashes the requested URL
+   and bounces to `/`, and `main.jsx` restores it via
+   `history.replaceState` before `BrowserRouter` ever reads the location.
 
 ## Data model
 
-Single Firestore collection, `entries`. Each document:
+Two Firestore collections are in play right now: `entries` is what the
+real UI reads and writes; `families` and `config/descriptorFields` back
+a newer, richer schema (`src/data/`) that's built and working but not
+yet wired into any real page — it's only reachable through the
+temporary `/__debug` harness (see below). Expect this section to
+collapse into one schema once that migration lands.
+
+### `entries` (current, live schema — what the app actually uses today)
 
 | Field | Type | Notes |
 |---|---|---|
@@ -166,7 +191,8 @@ Single Firestore collection, `entries`. Each document:
 | `author` | `{ uid, name, email }` | set once, from Google account, at creation — not editable |
 | `type` | string | free text via searchable/creatable dropdown |
 | `tags` | string[] | same pattern, multi-select |
-| `imageUrl` / `imageStoragePath` | string \| null | Storage download URL + path (path used for cleanup on delete/replace) |
+| `images` | `{ url, path }[]` | ordered, first = primary/cover; drag-to-reorder on create/edit |
+| `imageUrl` / `imageStoragePath` | string \| null | mirrors `images[0]`, kept for backward compatibility with pre-multi-image entries and any code still reading the singular fields |
 | `link` | string | optional |
 | `notes` | string | long-form |
 | `relatedIds` | string[] | other entries' Firestore doc IDs, resolved to titles at render time |
@@ -176,6 +202,41 @@ Single Firestore collection, `entries`. Each document:
 B doesn't automatically show A as related — you'd add that link from
 B's own edit page if you want it to go both ways. Keeping it explicit
 avoids surprising auto-generated links.
+
+### `entries` (schema-v2, in progress — via `src/data/entries.js`)
+
+Same collection name, different shape, not yet read by any real page:
+
+| Field | Type | Notes |
+|---|---|---|
+| `title` | string | required |
+| `postedBy` | `{ uid, name, email }` | same as `author` above, renamed |
+| `content` | `{ type: "text", body }` \| `{ type: "images", images: { url, path }[] }` \| `null` | polymorphic — an entry has at most one content type |
+| `descriptors` | object | freeform key → string value; only non-empty values are stored. The set of available keys is data, not code — see below |
+| `tags` | string[] | unchanged |
+| `relatedIds` | string[] | unchanged in shape, but **now two-way**: `getRelatedEntries()` merges an entry's own `relatedIds` with any entry that links back to it, computed in memory rather than dual-written |
+| `notes` | string | unchanged |
+| `createdAt` / `updatedAt` | Firestore timestamp | unchanged |
+
+**`config/descriptorFields`** (single doc) holds the list of available
+descriptor fields as `{ key, label }` pairs, seeded from
+`DEFAULT_DESCRIPTOR_FIELDS` in `src/data/descriptorFields.js` and
+extendable at runtime via `addDescriptorField()` — new fields don't
+need a deploy.
+
+**`families`** is a new collection for grouping entries that belong
+together (e.g. a series). An entry can belong to more than one family;
+membership lives only on the family doc's `entryIds` array, not as a
+back-reference on the entry.
+
+### `/__debug` — temporary harness for the schema-v2 data layer
+
+An unstyled page at `/__debug` (not linked from nav, gated behind the
+same sign-in + allowlist as everything else) exists to exercise the
+new data layer end to end against real Firestore — seed descriptor
+fields, create entries with either content type, link families, purge
+everything. It's scaffolding, not a feature: delete it once real UI is
+built on top of `src/data/`.
 
 ## Honest limitations
 
@@ -196,38 +257,49 @@ avoids surprising auto-generated links.
   video, but there's no compression or transcoding available client-side,
   so an uncompressed phone video would be a slow, expensive entry to
   load. Left out deliberately; can be added once you know you need it.
-- **Free tier limits exist** for Firestore and Storage. Comfortable for
-  a personal/small-group archive; check Firebase's pricing page if
-  usage grows a lot.
 - **Editing an image on an entry deletes the old one from Storage.**
   Intentional — otherwise replaced images accumulate as orphaned files
   you're still paying storage for.
+- **Two schemas coexist right now** (see Data model above), which is a
+  deliberate mid-migration state, not drift — but it means `src/data/`
+  and `src/hooks/useEntries.js` are reading/writing different shapes of
+  the same `entries` collection until the migration is finished.
 
 ## Project structure
 
 ```
-index.html              Vite entry HTML
-vite.config.js           base path must match your repo name
+index.html                     Vite entry HTML
+vite.config.js                 base: "/" (custom domain, not a repo subpath)
+public/
+  CNAME                        custom domain name, copied into build by Vite
+  404.html                     GitHub Pages SPA-routing fallback (see deploy step 10)
 src/
-  main.jsx                React root, router
-  App.jsx                 gate sequence (mobile → passcode → auth → allowlist) + routes
-  firebase.js              Firebase SDK init
-  firebase-config.js       your project config + allowlist + passcode (fill in)
+  main.jsx                     React root, router, restores path stashed by 404.html
+  App.jsx                      gate sequence (mobile → passcode → auth → allowlist) + routes
+  firebase.js                  Firebase SDK init
+  firebase-config.js           your project config + allowlist + passcode (fill in)
   hooks/
-    useAuth.js              auth state
-    useEntries.js            live Firestore subscription
+    useAuth.js                 auth state
+    useEntries.js              live Firestore subscription — reads the current (v1) entries schema
+  data/
+    entries.js                 schema-v2 entries: content, descriptors, two-way related
+    families.js                schema-v2 families collection
+    descriptorFields.js        schema-v2 configurable descriptor field list
+    purge.js                   wipes all entries/families/stored images — irreversible
   components/
-    TopNav.jsx               page nav + sync status + sign out
-    CreatableSelect.jsx      searchable/creatable dropdown (type, tags, related)
+    TopNav.jsx                 page nav + sign out
+    CreatableSelect.jsx        searchable/creatable dropdown (type, tags, related)
   pages/
     PasscodeGate.jsx
     MobileBlock.jsx
     SignInGate.jsx
-    IndexPage.jsx            List/Images toggle, search, type filter
-    AboutPage.jsx            placeholder copy
-    NewEntryPage.jsx         create + edit (same component, id param decides)
-    EntryDetailPage.jsx      full metadata view, edit/delete, related links
+    IndexPage.jsx               List/Images toggle, search, type filter
+    TagIndexPage.jsx            entries filtered by tag or type
+    AboutPage.jsx
+    NewEntryPage.jsx            create + edit (same component, id param decides)
+    EntryDetailPage.jsx         full metadata view, edit/delete, related links
+    DebugPage.jsx                temporary schema-v2 harness at /__debug
   styles/
-    index.css               all styling
-.github/workflows/deploy.yml   build + deploy on push to main
+    index.css                   all styling
+.github/workflows/deploy.yml    build + deploy on push to main
 ```
