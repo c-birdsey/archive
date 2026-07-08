@@ -1,28 +1,31 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ListView, ImagesView } from "../components/EntryViews.jsx";
+import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 
 export default function IndexPage({ entries }) {
-  const [view, setView] = useState("list");
+  const [view, setView] = useState("images");
   const [query, setQuery] = useState("");
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const descriptorFields = useDescriptorFields(true);
 
-  const mediumFilter = searchParams.get("medium") || "all";
+  const dParam = searchParams.get("d") || "";
+  const sep = dParam.indexOf(":");
+  const filterKey = sep > -1 ? dParam.slice(0, sep) : null;
+  const filterValue = sep > -1 ? dParam.slice(sep + 1) : null;
+  const filterLabel = filterKey
+    ? descriptorFields.find((f) => f.key === filterKey)?.label || filterKey
+    : null;
 
-  function setMediumFilter(medium) {
-    setSearchParams(medium === "all" ? {} : { medium });
+  function clearFilter() {
+    setSearchParams({});
   }
-
-  const mediums = useMemo(() => {
-    const set = new Set(entries.map((e) => e.descriptors?.medium).filter(Boolean));
-    return ["all", ...[...set].sort()];
-  }, [entries]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return entries
-      .filter((e) => mediumFilter === "all" || e.descriptors?.medium === mediumFilter)
+      .filter((e) => !filterKey || (e.descriptors?.[filterKey] || "").toLowerCase() === filterValue.toLowerCase())
       .filter((e) => {
         if (!q) return true;
         const hay = [
@@ -31,7 +34,7 @@ export default function IndexPage({ entries }) {
         ].join(" ").toLowerCase();
         return hay.includes(q);
       });
-  }, [entries, query, mediumFilter]);
+  }, [entries, query, filterKey, filterValue]);
 
   return (
     <>
@@ -51,17 +54,13 @@ export default function IndexPage({ entries }) {
           </button>
         </div>
 
-        <div className="nav-group">
-          {mediums.map((m) => (
-            <button
-              key={m}
-              className={mediumFilter === m ? "active" : ""}
-              onClick={() => setMediumFilter(m)}
-            >
-              {m === "all" ? "All" : m}
-            </button>
-          ))}
-        </div>
+        {filterKey && (
+          <p className="filter-indicator">
+            Filtered by {filterLabel}: {filterValue}
+            {" · "}
+            <button type="button" className="link-btn" onClick={clearFilter}>Clear</button>
+          </p>
+        )}
 
         <input
           type="search"

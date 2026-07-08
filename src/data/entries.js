@@ -58,6 +58,14 @@ export async function updateEntry(id, { title, notes, link, content, descriptors
   });
 }
 
+// A narrower sibling of updateEntry() for the entry page's inline tag
+// editor — a partial update so it doesn't have to round-trip every
+// other field (and risk clobbering them with stale local state) just
+// to add or remove a tag.
+export async function updateTags(id, tags) {
+  await updateDoc(doc(db, COLLECTION, id), { tags: tags || [], updatedAt: serverTimestamp() });
+}
+
 export async function deleteEntry(entry) {
   await deleteDoc(doc(db, COLLECTION, entry.id));
   if (entry.content?.type === "images") {

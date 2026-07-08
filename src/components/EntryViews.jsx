@@ -1,42 +1,29 @@
+import LetterGroupedList from "./LetterGroupedList.jsx";
+
 export function ListView({ entries, onOpen }) {
-  const sorted = [...entries].sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-  const groups = new Map();
-
-  for (const entry of sorted) {
-    const ch = (entry.title || "#").trim().charAt(0).toUpperCase();
-    const key = /[A-Z]/.test(ch) ? ch : "#";
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(entry);
-  }
-
-  const keys = [...groups.keys()].sort();
-
   return (
-    <main>
-      {keys.map((key) => (
-        <div className="letter-group" key={key}>
-          <p className="letter-head">{key}</p>
-          {groups.get(key).map((entry) => (
-            <button
-              type="button"
-              key={entry.id}
-              className="list-row"
-              onClick={() => onOpen(entry.id)}
-            >
-              <span className="row-type">{entry.descriptors?.medium || "—"}</span>
-              <span className="row-title-cell">
-                <span className="row-title">{entry.title}</span>
-                {entry.tags && entry.tags.length > 0 && (
-                  <span className="row-tags"> — {entry.tags.join(", ")}</span>
-                )}
-              </span>
-              <span className="row-author">{entry.postedBy?.name || "—"}</span>
-              <span className="row-year">{yearOf(entry.createdAt)}</span>
-            </button>
-          ))}
-        </div>
-      ))}
-    </main>
+    <LetterGroupedList
+      items={entries}
+      labelOf={(e) => e.title || ""}
+      keyOf={(e) => e.id}
+      renderItem={(entry) => (
+        <button
+          type="button"
+          key={entry.id}
+          className="list-row"
+          onClick={() => onOpen(entry.id)}
+        >
+          <span className="row-title-cell">
+            <span className="row-title">{entry.title}</span>
+            {entry.tags && entry.tags.length > 0 && (
+              <span className="row-tags"> — {entry.tags.join(", ")}</span>
+            )}
+          </span>
+          <span className="row-author">{entry.postedBy?.name || "—"}</span>
+          <span className="row-year">{yearOf(entry.createdAt)}</span>
+        </button>
+      )}
+    />
   );
 }
 
@@ -61,9 +48,7 @@ export function ImagesView({ entries, onOpen }) {
               </div>
             )}
             <p className="tile-title">{entry.title}</p>
-            <p className="tile-meta">
-              {entry.descriptors?.medium || "—"}, {yearOf(entry.createdAt)}
-            </p>
+            <p className="tile-meta">{yearOf(entry.createdAt)}</p>
           </button>
         );
       })}

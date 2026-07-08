@@ -1,8 +1,9 @@
-import { NavLink } from "react-router-dom";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase.js";
+import { NavLink, useLocation } from "react-router-dom";
 
 export default function TopNav() {
+  const location = useLocation();
+  const familiesActive = location.pathname.startsWith("/famil"); // /families and /family/:id
+
   return (
     <header className="topbar">
       <NavLink to="/" className="wordmark" end>
@@ -13,8 +14,8 @@ export default function TopNav() {
         <NavLink to="/" end className={({ isActive }) => (isActive ? "active" : "")}>
           Index
         </NavLink>
-        <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
-          About
+        <NavLink to="/families" className={familiesActive ? "active" : ""}>
+          Families
         </NavLink>
       </nav>
 
@@ -22,9 +23,9 @@ export default function TopNav() {
         <NavLink to="/new" className={({ isActive }) => (isActive ? "active" : "")}>
           New Entry
         </NavLink>
-        <button className="link-btn" onClick={() => signOut(auth)}>
-          Sign Out
-        </button>
+        <NavLink to="/about" className={({ isActive }) => (isActive ? "active" : "")}>
+          About
+        </NavLink>
       </div>
     </header>
   );

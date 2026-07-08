@@ -1,3 +1,6 @@
+import { signOut } from "firebase/auth";
+import { auth } from "../firebase.js";
+
 export default function AboutPage() {
   return (
     <main className="about-page">
@@ -23,6 +26,9 @@ export default function AboutPage() {
         working document, not intended as a curated, aesthetic object, but rather representative of an ongoing process.
       </p>
       <p className="about-version">V1.2 | Published July 2026</p>
+      <button type="button" className="signout-inline" onClick={() => signOut(auth)}>
+        Sign Out
+      </button>
     </main>
   );
 }

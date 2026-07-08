@@ -10,6 +10,8 @@ import SignInGate from "./pages/SignInGate.jsx";
 import TopNav from "./components/TopNav.jsx";
 import IndexPage from "./pages/IndexPage.jsx";
 import TagIndexPage from "./pages/TagIndexPage.jsx";
+import FamilyIndexPage from "./pages/FamilyIndexPage.jsx";
+import FamilyDetailPage from "./pages/FamilyDetailPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import NewEntryPage from "./pages/NewEntryPage.jsx";
 import EntryDetailPage from "./pages/EntryDetailPage.jsx";
@@ -59,6 +61,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<IndexPage entries={entries} />} />
         <Route path="/tag/:tag" element={<TagIndexPage entries={entries} />} />
+        <Route path="/families" element={<FamilyIndexPage />} />
+        <Route path="/family/:id" element={<FamilyDetailPage entries={entries} />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/new" element={<NewEntryPage entries={entries} user={user} />} />
         <Route path="/entry/:id" element={<EntryDetailPage entries={entries} />} />

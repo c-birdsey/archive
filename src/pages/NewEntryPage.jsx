@@ -92,11 +92,6 @@ export default function NewEntryPage({ entries, user }) {
     familyPrefilled.current = true;
   }, [isEditing, id, families]);
 
-  const mediumOptions = useMemo(() => {
-    const set = new Set(entries.map((e) => e.descriptors?.medium).filter(Boolean));
-    return [...set].sort().map((m) => ({ value: m, label: m }));
-  }, [entries]);
-
   const tagOptions = useMemo(() => {
     const set = new Set(entries.flatMap((e) => e.tags || []));
     return [...set].sort().map((t) => ({ value: t, label: t }));
@@ -233,18 +228,7 @@ export default function NewEntryPage({ entries, user }) {
           />
         </label>
 
-        <div className="field">
-          <span>Medium</span>
-          <CreatableSelect
-            options={mediumOptions}
-            selected={descriptorValues.medium ? [descriptorValues.medium] : []}
-            onChange={(vals) => setDescriptorValues((d) => ({ ...d, medium: vals[0] || "" }))}
-            allowCreate
-            placeholder="Search or add a medium…"
-          />
-        </div>
-
-        {descriptorFields.filter((f) => f.key !== "medium").map((f) => (
+        {descriptorFields.map((f) => (
           <label className="field" key={f.key}>
             <span>{f.label}</span>
             <input

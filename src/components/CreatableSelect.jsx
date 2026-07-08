@@ -17,6 +17,7 @@ export default function CreatableSelect({
   multiple = false,
   allowCreate = false,
   placeholder = "Search…",
+  renderLabel = (value, label) => label,
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -64,7 +65,7 @@ export default function CreatableSelect({
         <div className="creatable-chips">
           {selected.map((v, i) => (
             <span className="chip" key={v}>
-              {selectedLabels[i]}
+              {renderLabel(v, selectedLabels[i])}
               <button type="button" onClick={() => remove(v)} aria-label={`Remove ${selectedLabels[i]}`}>
                 &times;
               </button>

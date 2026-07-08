@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { deleteEntry, getRelatedEntries } from "../data/entries.js";
+import { deleteEntry, getRelatedEntries, updateTags } from "../data/entries.js";
 import { getFamiliesForEntry, removeEntryFromFamily } from "../data/families.js";
 import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { useFamilies } from "../hooks/useFamilies.js";
+import CreatableSelect from "../components/CreatableSelect.jsx";
 
 export default function EntryDetailPage({ entries }) {
   const { id } = useParams();
@@ -17,8 +18,13 @@ export default function EntryDetailPage({ entries }) {
   const relatedEntries = useMemo(() => getRelatedEntries(id, entries), [id, entries]);
   const entryFamilies = useMemo(() => getFamiliesForEntry(id, families), [id, families]);
 
+  const tagOptions = useMemo(() => {
+    const set = new Set(entries.flatMap((e) => e.tags || []));
+    return [...set].sort().map((t) => ({ value: t, label: t }));
+  }, [entries]);
+
   const descriptorLabel = (key) => descriptorFields.find((f) => f.key === key)?.label || key;
-  const otherDescriptors = Object.entries(entry?.descriptors || {}).filter(([key]) => key !== "medium");
+  const descriptorEntries = Object.entries(entry?.descriptors || {});
 
   if (!entry) {
     return (
@@ -44,79 +50,93 @@ export default function EntryDetailPage({ entries }) {
     }
   }
 
+  function handleTagsChange(newTags) {
+    updateTags(entry.id, newTags).catch((err) => alert(`Couldn't update tags: ${err.message}`));
+  }
+
   return (
     <main className="entry-detail">
       <div className="entry-detail-meta">
-        {entry.descriptors?.medium ? (
-          <Link to={`/?medium=${encodeURIComponent(entry.descriptors.medium)}`}>
-            {entry.descriptors.medium}
-          </Link>
-        ) : (
-          <span>—</span>
-        )}
         <span>{fullDate(entry.createdAt)}</span>
         <span>{entry.postedBy?.name || "Unknown"}</span>
       </div>
 
-      {entry.content?.type === "images" &&
-        (entry.content.images || []).map((img, i) => (
-          <img key={img.path || img.url || i} className="entry-detail-image" src={img.url} alt="" />
-        ))}
+      <div className="entry-detail-primary">
+        <div className="entry-detail-main">
+          <h1 className="entry-detail-title">{entry.title}</h1>
 
-      <h1 className="entry-detail-title">{entry.title}</h1>
-
-      {entry.content?.type === "text" && (
-        <p className="entry-detail-text">{entry.content.body}</p>
-      )}
-
-      {entry.link && (
-        <a className="view-url" href={entry.link} target="_blank" rel="noopener noreferrer">
-          {entry.link}
-        </a>
-      )}
-
-      {entry.notes && <p className="entry-detail-notes">{entry.notes}</p>}
-
-      {otherDescriptors.length > 0 && (
-        <dl className="entry-detail-descriptors">
-          {otherDescriptors.map(([key, value]) => (
-            <div key={key}>
-              <dt>{descriptorLabel(key)}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
-
-      {entry.tags && entry.tags.length > 0 && (
-        <p className="entry-detail-tags">
-          {entry.tags.map((tag, i) => (
-            <span key={tag}>
-              {i > 0 && ", "}
-              <Link to={`/tag/${encodeURIComponent(tag)}`}>{tag}</Link>
-            </span>
-          ))}
-        </p>
-      )}
-
-      {relatedEntries.length > 0 && (
-        <div className="entry-detail-related">
-          <p className="related-label">Related</p>
-          <ul>
-            {relatedEntries.map((r) => (
-              <li key={r.id}>
-                <Link to={`/entry/${r.id}`}>{r.title}</Link>
-              </li>
+          {entry.content?.type === "images" &&
+            (entry.content.images || []).map((img, i) => (
+              <img key={img.path || img.url || i} className="entry-detail-image" src={img.url} alt="" />
             ))}
-          </ul>
-        </div>
-      )}
 
-      {entryFamilies.length > 0 && (
-        <p className="entry-detail-families">
-          Family: {entryFamilies.map((f) => f.name).join(", ")}
-        </p>
-      )}
+          {entry.content?.type === "text" && (
+            <p className="entry-detail-text">{entry.content.body}</p>
+          )}
+
+          {entry.link && (
+            <a className="view-url" href={entry.link} target="_blank" rel="noopener noreferrer">
+              {entry.link}
+            </a>
+          )}
+        </div>
+
+        <div className="entry-detail-sidebar">
+          {descriptorEntries.length > 0 && (
+            <dl className="entry-detail-descriptors">
+              {descriptorEntries.map(([key, value]) => (
+                <div key={key}>
+                  <dt>{descriptorLabel(key)}</dt>
+                  <dd>
+                    <Link to={`/?d=${encodeURIComponent(key)}:${encodeURIComponent(value)}`}>{value}</Link>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          )}
+
+          <div className="entry-detail-tags-editor">
+            <CreatableSelect
+              options={tagOptions}
+              selected={entry.tags || []}
+              onChange={handleTagsChange}
+              multiple
+              allowCreate
+              placeholder="Add a tag…"
+              renderLabel={(tag) => <Link to={`/tag/${encodeURIComponent(tag)}`}>{tag}</Link>}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="entry-detail-tertiary">
+        {entry.notes && <p className="entry-detail-notes">{entry.notes}</p>}
+
+        {relatedEntries.length > 0 && (
+          <div className="entry-detail-related">
+            <p className="related-label">Related</p>
+            <ul>
+              {relatedEntries.map((r) => (
+                <li key={r.id}>
+                  <Link to={`/entry/${r.id}`}>{r.title}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {entryFamilies.length > 0 && (
+          <p className="entry-detail-families">
+            Family:{" "}
+            {entryFamilies.map((f, i) => (
+              <span key={f.id}>
+                {i > 0 && ", "}
+                <Link to={`/family/${f.id}`}>{f.name}</Link>
+              </span>
+            ))}
+          </p>
+        )}
+      </div>
 
       <div className="view-actions">
         <button className="link-btn" onClick={() => navigate(`/entry/${entry.id}/edit`)}>
