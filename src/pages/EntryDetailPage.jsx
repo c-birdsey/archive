@@ -1,22 +1,24 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { doc, deleteDoc } from "firebase/firestore";
-import { ref, deleteObject } from "firebase/storage";
-import { db, storage } from "../firebase.js";
+import { deleteEntry, getRelatedEntries } from "../data/entries.js";
+import { getFamiliesForEntry, removeEntryFromFamily } from "../data/families.js";
+import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
+import { useFamilies } from "../hooks/useFamilies.js";
 
 export default function EntryDetailPage({ entries }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
 
-  const entry = useMemo(() => entries.find((e) => e.id === id), [entries, id]);
+  const descriptorFields = useDescriptorFields(true);
+  const families = useFamilies(true);
 
-  const relatedEntries = useMemo(() => {
-    if (!entry?.relatedIds) return [];
-    return entry.relatedIds
-      .map((rid) => entries.find((e) => e.id === rid))
-      .filter(Boolean);
-  }, [entry, entries]);
+  const entry = useMemo(() => entries.find((e) => e.id === id), [entries, id]);
+  const relatedEntries = useMemo(() => getRelatedEntries(id, entries), [id, entries]);
+  const entryFamilies = useMemo(() => getFamiliesForEntry(id, families), [id, families]);
+
+  const descriptorLabel = (key) => descriptorFields.find((f) => f.key === key)?.label || key;
+  const otherDescriptors = Object.entries(entry?.descriptors || {}).filter(([key]) => key !== "medium");
 
   if (!entry) {
     return (
@@ -31,15 +33,9 @@ export default function EntryDetailPage({ entries }) {
     if (!confirm("Delete this entry? This can't be undone.")) return;
     setDeleting(true);
     try {
-      await deleteDoc(doc(db, "entries", entry.id));
-      const paths = Array.isArray(entry.images) && entry.images.length > 0
-        ? entry.images.map((img) => img.path).filter(Boolean)
-        : entry.imageStoragePath
-          ? [entry.imageStoragePath]
-          : [];
-      for (const path of paths) {
-        try { await deleteObject(ref(storage, path)); }
-        catch (e) { console.warn("Couldn't delete stored image:", e.message); }
+      await deleteEntry(entry);
+      for (const family of entryFamilies) {
+        await removeEntryFromFamily(family.id, entry.id);
       }
       navigate("/");
     } catch (err) {
@@ -51,32 +47,27 @@ export default function EntryDetailPage({ entries }) {
   return (
     <main className="entry-detail">
       <div className="entry-detail-meta">
-        {entry.types && entry.types.length > 0 ? (
-          <span>
-            {entry.types.map((t, i) => (
-              <span key={t}>
-                {i > 0 && ", "}
-                <Link to={`/?type=${encodeURIComponent(t)}`}>{t}</Link>
-              </span>
-            ))}
-          </span>
+        {entry.descriptors?.medium ? (
+          <Link to={`/?medium=${encodeURIComponent(entry.descriptors.medium)}`}>
+            {entry.descriptors.medium}
+          </Link>
         ) : (
           <span>—</span>
         )}
         <span>{fullDate(entry.createdAt)}</span>
-        <span>{entry.author?.name || "Unknown"}</span>
+        <span>{entry.postedBy?.name || "Unknown"}</span>
       </div>
 
-      {(Array.isArray(entry.images) && entry.images.length > 0
-        ? entry.images
-        : entry.imageUrl
-          ? [{ url: entry.imageUrl }]
-          : []
-      ).map((img, i) => (
-        <img key={img.path || img.url || i} className="entry-detail-image" src={img.url} alt="" />
-      ))}
+      {entry.content?.type === "images" &&
+        (entry.content.images || []).map((img, i) => (
+          <img key={img.path || img.url || i} className="entry-detail-image" src={img.url} alt="" />
+        ))}
 
       <h1 className="entry-detail-title">{entry.title}</h1>
+
+      {entry.content?.type === "text" && (
+        <p className="entry-detail-text">{entry.content.body}</p>
+      )}
 
       {entry.link && (
         <a className="view-url" href={entry.link} target="_blank" rel="noopener noreferrer">
@@ -85,6 +76,17 @@ export default function EntryDetailPage({ entries }) {
       )}
 
       {entry.notes && <p className="entry-detail-notes">{entry.notes}</p>}
+
+      {otherDescriptors.length > 0 && (
+        <dl className="entry-detail-descriptors">
+          {otherDescriptors.map(([key, value]) => (
+            <div key={key}>
+              <dt>{descriptorLabel(key)}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
 
       {entry.tags && entry.tags.length > 0 && (
         <p className="entry-detail-tags">
@@ -108,6 +110,12 @@ export default function EntryDetailPage({ entries }) {
             ))}
           </ul>
         </div>
+      )}
+
+      {entryFamilies.length > 0 && (
+        <p className="entry-detail-families">
+          Family: {entryFamilies.map((f) => f.name).join(", ")}
+        </p>
       )}
 
       <div className="view-actions">

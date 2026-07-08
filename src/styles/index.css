@@ -262,6 +262,39 @@ a{ color:inherit; }
 .entry-form textarea{ resize:vertical; border:1px solid var(--line); padding:10px; }
 .entry-form input:focus, .entry-form textarea:focus{ outline:none; border-color:var(--ink); }
 .entry-form input[type=file]{ font-size:13px; }
+.entry-form select{
+  display:block;
+  width:100%;
+  font-size:14px;
+  color:var(--ink);
+  padding:7px 0;
+  border:none;
+  border-bottom:1px solid var(--line);
+  border-radius:0;
+  background:transparent;
+}
+.entry-form select:focus{ outline:none; border-color:var(--ink); }
+
+.family-field{ border:none; margin:0 0 20px; padding:0; }
+.family-field legend{ font-size:12px; color:var(--gray); margin-bottom:6px; padding:0; }
+.radio-row{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:14px;
+  color:var(--ink);
+  margin-bottom:6px;
+}
+.family-new-fields{ display:flex; flex-direction:column; gap:8px; margin:8px 0 0 22px; }
+.family-new-fields input{
+  font-size:14px;
+  color:var(--ink);
+  padding:7px 0;
+  border:none;
+  border-bottom:1px solid var(--line);
+  background:transparent;
+}
+.family-new-fields input:focus{ outline:none; border-color:var(--ink); }
 
 .image-manager{
   display:flex;
@@ -399,8 +432,16 @@ a{ color:inherit; }
 .entry-detail-image{ width:100%; display:block; margin-bottom:20px; }
 .entry-detail-title{ font-size:22px; font-weight:500; margin:0 0 12px; }
 .view-url{ font-size:13px; color:var(--ink); word-break:break-all; display:inline-block; margin-bottom:14px; text-decoration:underline; }
+.entry-detail-text{ font-size:14px; line-height:1.7; white-space:pre-wrap; margin:0 0 18px; }
 .entry-detail-notes{ font-size:14px; line-height:1.7; white-space:pre-wrap; margin:0 0 18px; }
 .entry-detail-tags{ font-size:13px; color:var(--gray); margin:0 0 24px; }
+
+.entry-detail-descriptors{ margin:0 0 24px; }
+.entry-detail-descriptors > div{ display:flex; gap:8px; font-size:13px; margin-bottom:4px; }
+.entry-detail-descriptors dt{ color:var(--gray); min-width:120px; }
+.entry-detail-descriptors dd{ margin:0; color:var(--ink); }
+
+.entry-detail-families{ font-size:13px; color:var(--gray); margin:0 0 24px; }
 
 .entry-detail-meta a, .entry-detail-tags a{
   color:inherit;

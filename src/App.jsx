@@ -3,6 +3,7 @@ import { Routes, Route, useLocation } from "react-router-dom";
 import { useAuth } from "./hooks/useAuth.js";
 import { useEntries } from "./hooks/useEntries.js";
 import { ALLOWED_EMAILS } from "./firebase-config.js";
+import { ensureDescriptorFieldsSeeded } from "./data/descriptorFields.js";
 import PasscodeGate, { isLobbyUnlocked } from "./pages/PasscodeGate.jsx";
 import MobileBlock from "./pages/MobileBlock.jsx";
 import SignInGate from "./pages/SignInGate.jsx";
@@ -41,6 +42,10 @@ export default function App() {
 
   const isAllowed = user && ALLOWED_EMAILS.includes(user.email);
   const { entries } = useEntries(Boolean(isAllowed));
+
+  useEffect(() => {
+    if (isAllowed) ensureDescriptorFieldsSeeded();
+  }, [isAllowed]);
 
   if (isMobile) return <MobileBlock />;
   if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;

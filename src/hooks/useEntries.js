@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, onSnapshot, orderBy, query } from "firebase/firestore";
-import { db } from "../firebase.js";
+import { subscribeEntries } from "../data/entries.js";
 
 // Subscribes to the whole "entries" collection in real time. At the scale
 // this app is meant for (a personal/small-group reference archive — tens
@@ -19,18 +18,9 @@ export function useEntries(enabled) {
       setLoading(true);
       return;
     }
-    const q = query(collection(db, "entries"), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        setEntries(
-          snap.docs.map((d) => {
-            const data = d.data();
-            // Older entries stored a single string; newer ones store an array.
-            const types = Array.isArray(data.type) ? data.type : data.type ? [data.type] : [];
-            return { id: d.id, ...data, types };
-          })
-        );
+    const unsub = subscribeEntries(
+      (docs) => {
+        setEntries(docs);
         setLoading(false);
       },
       (err) => {

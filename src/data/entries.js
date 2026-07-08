@@ -30,10 +30,11 @@ function poster(user) {
   return { uid: user.uid, name: user.displayName || user.email, email: user.email };
 }
 
-export async function createEntry({ title, notes, content, descriptors, tags, relatedIds, user }) {
+export async function createEntry({ title, notes, link, content, descriptors, tags, relatedIds, user }) {
   return addDoc(collection(db, COLLECTION), {
     title: title.trim(),
     notes: notes?.trim() || "",
+    link: link?.trim() || "",
     content: content || null,
     descriptors: cleanDescriptors(descriptors),
     tags: tags || [],
@@ -44,10 +45,11 @@ export async function createEntry({ title, notes, content, descriptors, tags, re
   });
 }
 
-export async function updateEntry(id, { title, notes, content, descriptors, tags, relatedIds }) {
+export async function updateEntry(id, { title, notes, link, content, descriptors, tags, relatedIds }) {
   await updateDoc(doc(db, COLLECTION, id), {
     title: title.trim(),
     notes: notes?.trim() || "",
+    link: link?.trim() || "",
     content: content || null,
     descriptors: cleanDescriptors(descriptors),
     tags: tags || [],

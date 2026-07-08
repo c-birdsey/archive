@@ -8,27 +8,30 @@ export default function IndexPage({ entries }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const typeFilter = searchParams.get("type") || "all";
+  const mediumFilter = searchParams.get("medium") || "all";
 
-  function setTypeFilter(type) {
-    setSearchParams(type === "all" ? {} : { type });
+  function setMediumFilter(medium) {
+    setSearchParams(medium === "all" ? {} : { medium });
   }
 
-  const types = useMemo(() => {
-    const set = new Set(entries.flatMap((e) => e.types || []));
+  const mediums = useMemo(() => {
+    const set = new Set(entries.map((e) => e.descriptors?.medium).filter(Boolean));
     return ["all", ...[...set].sort()];
   }, [entries]);
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return entries
-      .filter((e) => typeFilter === "all" || (e.types || []).includes(typeFilter))
+      .filter((e) => mediumFilter === "all" || e.descriptors?.medium === mediumFilter)
       .filter((e) => {
         if (!q) return true;
-        const hay = [e.title, e.notes, e.author?.name, ...(e.tags || [])].join(" ").toLowerCase();
+        const hay = [
+          e.title, e.notes, e.postedBy?.name,
+          ...(e.tags || []), ...Object.values(e.descriptors || {}),
+        ].join(" ").toLowerCase();
         return hay.includes(q);
       });
-  }, [entries, query, typeFilter]);
+  }, [entries, query, mediumFilter]);
 
   return (
     <>
@@ -49,13 +52,13 @@ export default function IndexPage({ entries }) {
         </div>
 
         <div className="nav-group">
-          {types.map((t) => (
+          {mediums.map((m) => (
             <button
-              key={t}
-              className={typeFilter === t ? "active" : ""}
-              onClick={() => setTypeFilter(t)}
+              key={m}
+              className={mediumFilter === m ? "active" : ""}
+              onClick={() => setMediumFilter(m)}
             >
-              {t === "all" ? "All" : t}
+              {m === "all" ? "All" : m}
             </button>
           ))}
         </div>

@@ -176,67 +176,42 @@ change `base` back to `/your-repo-name/` and remove `public/CNAME`.
 
 ## Data model
 
-Two Firestore collections are in play right now: `entries` is what the
-real UI reads and writes; `families` and `config/descriptorFields` back
-a newer, richer schema (`src/data/`) that's built and working but not
-yet wired into any real page — it's only reachable through the
-temporary `/__debug` harness (see below). Expect this section to
-collapse into one schema once that migration lands.
-
-### `entries` (current, live schema — what the app actually uses today)
+### `entries`
 
 | Field | Type | Notes |
 |---|---|---|
 | `title` | string | required |
-| `author` | `{ uid, name, email }` | set once, from Google account, at creation — not editable |
-| `type` | string | free text via searchable/creatable dropdown |
-| `tags` | string[] | same pattern, multi-select |
-| `images` | `{ url, path }[]` | ordered, first = primary/cover; drag-to-reorder on create/edit |
-| `imageUrl` / `imageStoragePath` | string \| null | mirrors `images[0]`, kept for backward compatibility with pre-multi-image entries and any code still reading the singular fields |
+| `postedBy` | `{ uid, name, email }` | set once, from Google account, at creation — not editable |
+| `content` | `{ type: "text", body }` \| `{ type: "images", images: { url, path }[] }` \| `null` | polymorphic — an entry has at most one content type. For images, order matters: `images[0]` is the primary/cover, set via drag-to-reorder on create/edit |
+| `descriptors` | object | freeform key → string value; only non-empty values are stored. The set of available keys is data, not code — see `config/descriptorFields` below. `descriptors.medium` (photography, drawing, model, essay, etc.) is the primary categorization axis, driving the index filter tabs |
+| `tags` | string[] | via searchable/creatable dropdown, multi-select |
 | `link` | string | optional |
 | `notes` | string | long-form |
-| `relatedIds` | string[] | other entries' Firestore doc IDs, resolved to titles at render time |
+| `relatedIds` | string[] | other entries' Firestore doc IDs. **Two-way**: `getRelatedEntries()` merges an entry's own `relatedIds` with any entry that links back to it, computed in memory rather than dual-written |
 | `createdAt` / `updatedAt` | Firestore timestamp | server-set |
 
-**Related entries are one-directional as entered.** If you link A → B,
-B doesn't automatically show A as related — you'd add that link from
-B's own edit page if you want it to go both ways. Keeping it explicit
-avoids surprising auto-generated links.
-
-### `entries` (schema-v2, in progress — via `src/data/entries.js`)
-
-Same collection name, different shape, not yet read by any real page:
-
-| Field | Type | Notes |
-|---|---|---|
-| `title` | string | required |
-| `postedBy` | `{ uid, name, email }` | same as `author` above, renamed |
-| `content` | `{ type: "text", body }` \| `{ type: "images", images: { url, path }[] }` \| `null` | polymorphic — an entry has at most one content type |
-| `descriptors` | object | freeform key → string value; only non-empty values are stored. The set of available keys is data, not code — see below |
-| `tags` | string[] | unchanged |
-| `relatedIds` | string[] | unchanged in shape, but **now two-way**: `getRelatedEntries()` merges an entry's own `relatedIds` with any entry that links back to it, computed in memory rather than dual-written |
-| `notes` | string | unchanged |
-| `createdAt` / `updatedAt` | Firestore timestamp | unchanged |
-
 **`config/descriptorFields`** (single doc) holds the list of available
-descriptor fields as `{ key, label }` pairs, seeded from
-`DEFAULT_DESCRIPTOR_FIELDS` in `src/data/descriptorFields.js` and
-extendable at runtime via `addDescriptorField()` — new fields don't
-need a deploy.
+descriptor fields as `{ key, label }` pairs, seeded automatically on
+first sign-in from `DEFAULT_DESCRIPTOR_FIELDS` in
+`src/data/descriptorFields.js`, and extendable at runtime via
+`addDescriptorField()` — new fields don't need a deploy.
 
-**`families`** is a new collection for grouping entries that belong
-together (e.g. a series). An entry can belong to more than one family;
+**`families`** is a collection for grouping entries that belong
+together (e.g. a series). An entry can belong to more than one family,
+though the create/edit UI only offers a single choice at a time;
 membership lives only on the family doc's `entryIds` array, not as a
-back-reference on the entry.
+back-reference on the entry, and isn't yet browsable as its own page —
+only shown inline on entry detail.
 
-### `/__debug` — temporary harness for the schema-v2 data layer
+### `/__debug` — data-layer test harness
 
 An unstyled page at `/__debug` (not linked from nav, gated behind the
-same sign-in + allowlist as everything else) exists to exercise the
-new data layer end to end against real Firestore — seed descriptor
+same sign-in + allowlist as everything else) exists to exercise
+`src/data/` end to end against real Firestore — seed descriptor
 fields, create entries with either content type, link families, purge
-everything. It's scaffolding, not a feature: delete it once real UI is
-built on top of `src/data/`.
+everything. The real UI now covers all of this; `/__debug` stays only
+as a fallback for manual testing (e.g. purging test data) and can be
+deleted once you're confident the real UI is solid.
 
 ## Honest limitations
 
@@ -260,10 +235,9 @@ built on top of `src/data/`.
 - **Editing an image on an entry deletes the old one from Storage.**
   Intentional — otherwise replaced images accumulate as orphaned files
   you're still paying storage for.
-- **Two schemas coexist right now** (see Data model above), which is a
-  deliberate mid-migration state, not drift — but it means `src/data/`
-  and `src/hooks/useEntries.js` are reading/writing different shapes of
-  the same `entries` collection until the migration is finished.
+- **No dedicated family browse page.** You can assign an entry to a
+  family and see its fellow members inline on entry detail, but there's
+  no `/family/:id` index the way `/tag/:tag` works for tags.
 
 ## Project structure
 
@@ -280,25 +254,27 @@ src/
   firebase-config.js           your project config + allowlist + passcode (fill in)
   hooks/
     useAuth.js                 auth state
-    useEntries.js              live Firestore subscription — reads the current (v1) entries schema
+    useEntries.js              live entries subscription (src/data/entries.js)
+    useDescriptorFields.js     live config/descriptorFields subscription
+    useFamilies.js             live families subscription
   data/
-    entries.js                 schema-v2 entries: content, descriptors, two-way related
-    families.js                schema-v2 families collection
-    descriptorFields.js        schema-v2 configurable descriptor field list
+    entries.js                 entries: content, descriptors, two-way related
+    families.js                families collection
+    descriptorFields.js        configurable descriptor field list
     purge.js                   wipes all entries/families/stored images — irreversible
   components/
     TopNav.jsx                 page nav + sign out
-    CreatableSelect.jsx        searchable/creatable dropdown (type, tags, related)
+    CreatableSelect.jsx        searchable/creatable dropdown (medium, tags, related)
   pages/
     PasscodeGate.jsx
     MobileBlock.jsx
     SignInGate.jsx
-    IndexPage.jsx               List/Images toggle, search, type filter
-    TagIndexPage.jsx            entries filtered by tag or type
+    IndexPage.jsx               List/Images toggle, search, medium filter
+    TagIndexPage.jsx            entries filtered by tag
     AboutPage.jsx
     NewEntryPage.jsx            create + edit (same component, id param decides)
-    EntryDetailPage.jsx         full metadata view, edit/delete, related links
-    DebugPage.jsx                temporary schema-v2 harness at /__debug
+    EntryDetailPage.jsx         full metadata view, edit/delete, related + family links
+    DebugPage.jsx                data-layer test harness at /__debug
   styles/
     index.css                   all styling
 .github/workflows/deploy.yml    build + deploy on push to main
