@@ -73,6 +73,14 @@ service cloud.firestore {
     match /entries/{entryId} {
       allow read, write: if isAllowed();
     }
+
+    match /families/{familyId} {
+      allow read, write: if isAllowed();
+    }
+
+    match /config/{docId} {
+      allow read, write: if isAllowed();
+    }
   }
 }
 ```

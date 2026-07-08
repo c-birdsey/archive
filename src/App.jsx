@@ -12,6 +12,7 @@ import TagIndexPage from "./pages/TagIndexPage.jsx";
 import AboutPage from "./pages/AboutPage.jsx";
 import NewEntryPage from "./pages/NewEntryPage.jsx";
 import EntryDetailPage from "./pages/EntryDetailPage.jsx";
+import DebugPage from "./pages/DebugPage.jsx";
 
 const MOBILE_BREAKPOINT = 900;
 
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/new" element={<NewEntryPage entries={entries} user={user} />} />
         <Route path="/entry/:id" element={<EntryDetailPage entries={entries} />} />
         <Route path="/entry/:id/edit" element={<NewEntryPage entries={entries} user={user} />} />
+        <Route path="/__debug" element={<DebugPage user={user} />} />
       </Routes>
     </div>
   );
