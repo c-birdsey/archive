@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { deleteEntry, getRelatedEntries, updateTags, updateRelated } from "../data/entries.js";
+import { deleteEntry, getRelatedEntries, updateTags, updateRelated, isPdf, assetName } from "../data/entries.js";
 import {
   createFamily, addEntryToFamily, removeEntryFromFamily, getFamiliesForEntry,
 } from "../data/families.js";
@@ -8,11 +8,15 @@ import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { useFamilies } from "../hooks/useFamilies.js";
 import CreatableSelect from "../components/CreatableSelect.jsx";
 import Lightbox from "../components/Lightbox.jsx";
+import { youtubeId } from "../data/youtube.js";
 
 // Only these descriptors are worth filtering the whole archive by from an
-// entry's page -- the rest (collaborator, location, status, etc.) stay
-// as plain text.
-const FILTERABLE_DESCRIPTOR_KEYS = new Set(["primative", "author", "year", "country"]);
+// entry's page -- the rest (collaborator, location, etc.) stay as plain
+// text. Some of these (country, project, status) aren't pickable in the
+// Filters panel itself, but ?d=key:value still filters correctly for any
+// descriptor key (see matchesFilter in data/filters.js), so linking to
+// them here works even without a matching Filters-panel entry.
+const FILTERABLE_DESCRIPTOR_KEYS = new Set(["primative", "author", "year", "country", "project", "status"]);
 
 export default function EntryDetailPage({ entries, user }) {
   const { id } = useParams();
@@ -62,6 +66,11 @@ export default function EntryDetailPage({ entries, user }) {
   const descriptorLabel = (key) => descriptorFields.find((f) => f.key === key)?.label || key;
   const descriptorEntries = Object.entries(entry?.descriptors || {});
   const images = entry?.content?.type === "images" ? entry.content.images || [] : [];
+  // PDFs live in the same array as pictures but open in a new tab instead
+  // of the lightbox, so the lightbox only ever cycles through the actual
+  // images -- indices below are into this filtered list, not `images`.
+  const viewableImages = useMemo(() => images.filter((img) => !isPdf(img)), [images]);
+  const ytId = youtubeId(entry?.link);
 
   if (!entry) {
     return (
@@ -217,17 +226,53 @@ export default function EntryDetailPage({ entries, user }) {
       <main className="entry-detail-gallery">
         {images.map((img, i) => {
           const key = img.path || img.url || i;
-          return (
+          const pdf = isPdf(img);
+          // Older PDF entries uploaded before thumbnail generation existed
+          // have no rasterized page to show -- nothing sensible renders as
+          // an <img>, so fall back to a plain filename link.
+          if (pdf && !img.thumbUrl) {
+            return (
+              <a
+                key={key}
+                href={img.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="entry-detail-gallery-pdf-fallback"
+              >
+                {assetName(img)}
+              </a>
+            );
+          }
+          const className = `entry-detail-gallery-item${orientations[key] === "landscape" ? " landscape" : ""}`;
+          const thumbnail = (
+            <img src={pdf ? img.thumbUrl : img.url} alt="" onLoad={(e) => handleImageLoad(key, e)} />
+          );
+          return pdf ? (
+            <a key={key} href={img.url} target="_blank" rel="noopener noreferrer" className={className}>
+              {thumbnail}
+            </a>
+          ) : (
             <button
               type="button"
               key={key}
-              className={`entry-detail-gallery-item${orientations[key] === "landscape" ? " landscape" : ""}`}
-              onClick={() => setLightboxIndex(i)}
+              className={className}
+              onClick={() => setLightboxIndex(viewableImages.indexOf(img))}
             >
-              <img src={img.url} alt="" onLoad={(e) => handleImageLoad(key, e)} />
+              {thumbnail}
             </button>
           );
         })}
+
+        {ytId && (
+          <div className="entry-detail-youtube">
+            <iframe
+              src={`https://www.youtube.com/embed/${ytId}`}
+              title={entry.title}
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
+          </div>
+        )}
 
         {entry.content?.type === "text" && (
           <p className="entry-detail-text">{entry.content.body}</p>
@@ -235,7 +280,7 @@ export default function EntryDetailPage({ entries, user }) {
       </main>
 
       <Lightbox
-        images={images}
+        images={viewableImages}
         index={lightboxIndex}
         onClose={() => setLightboxIndex(null)}
         onNavigate={setLightboxIndex}

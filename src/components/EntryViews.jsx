@@ -1,4 +1,6 @@
 import LetterGroupedList from "./LetterGroupedList.jsx";
+import { isPdf } from "../data/entries.js";
+import { youtubeThumbnail } from "../data/youtube.js";
 
 export function ListView({ entries, onOpen }) {
   return (
@@ -32,7 +34,10 @@ export function ImagesView({ entries, onOpen }) {
   return (
     <main className="images-grid">
       {sorted.map((entry) => {
-        const coverUrl = entry.content?.type === "images" ? entry.content.images?.[0]?.url : null;
+        const cover = entry.content?.type === "images" ? entry.content.images?.[0] : null;
+        const coverUrl = cover
+          ? (isPdf(cover) ? cover.thumbUrl || null : cover.url)
+          : youtubeThumbnail(entry.link);
         return (
           <button
             type="button"

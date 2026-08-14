@@ -30,6 +30,24 @@ function poster(user) {
   return { uid: user.uid, name: user.displayName || user.email, email: user.email };
 }
 
+// content.images holds both pictures and PDFs (same {url, path} shape) --
+// distinguished by extension since there's no separate content type.
+export function isPdf(item) {
+  if (item?.file) return item.file.type === "application/pdf" || /\.pdf$/i.test(item.file.name || "");
+  return /\.pdf(\?|#|$)/i.test(item?.path || item?.url || "");
+}
+
+// A new upload has a File, so its name is straightforward. An existing
+// (already-saved) asset only has a storage path/url; strip the
+// "<timestamp>-<random>-" prefix NewEntryPage writes on upload so it
+// reads as a plain filename either way.
+export function assetName(item) {
+  if (item.file) return item.file.name;
+  const source = item.path || item.url || "asset";
+  const last = decodeURIComponent(source.split("/").pop().split("?")[0]);
+  return last.replace(/^\d+-[a-z0-9]+-/, "");
+}
+
 export async function createEntry({ title, notes, link, content, descriptors, tags, relatedIds, user }) {
   return addDoc(collection(db, COLLECTION), {
     title: title.trim(),
@@ -76,9 +94,11 @@ export async function deleteEntry(entry) {
   await deleteDoc(doc(db, COLLECTION, entry.id));
   if (entry.content?.type === "images") {
     for (const img of entry.content.images || []) {
-      if (!img.path) continue;
-      try { await deleteObject(ref(storage, img.path)); }
-      catch (e) { console.warn("Couldn't delete stored image:", e.message); }
+      for (const path of [img.path, img.thumbPath]) {
+        if (!path) continue;
+        try { await deleteObject(ref(storage, path)); }
+        catch (e) { console.warn("Couldn't delete stored image:", e.message); }
+      }
     }
   }
 }

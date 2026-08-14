@@ -4,10 +4,11 @@ import { doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "../firebase.js";
 import CreatableSelect from "../components/CreatableSelect.jsx";
-import { createEntry, updateEntry } from "../data/entries.js";
+import { createEntry, updateEntry, assetName, isPdf } from "../data/entries.js";
 import {
   createFamily, addEntryToFamily, removeEntryFromFamily, getFamiliesForEntry,
 } from "../data/families.js";
+import { renderPdfFirstPage } from "../data/pdfThumbnail.js";
 import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { useFamilies } from "../hooks/useFamilies.js";
 
@@ -69,17 +70,6 @@ function buildFieldRow(primative, descriptorFields) {
   if (primative !== "Discursive") add("source");
 
   return row;
-}
-
-// A new upload has a File, so its name is straightforward. An existing
-// (already-saved) image only has a storage path/url; strip the
-// "<timestamp>-<random>-" prefix NewEntryPage writes on upload so it
-// reads as a plain filename either way.
-function imageDisplayName(img) {
-  if (img.file) return img.file.name;
-  const source = img.path || img.url || "image";
-  const last = decodeURIComponent(source.split("/").pop().split("?")[0]);
-  return last.replace(/^\d+-[a-z0-9]+-/, "");
 }
 
 export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
@@ -155,6 +145,8 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
             key: img.path || img.url || `existing-${i}`,
             url: img.url,
             path: img.path || null,
+            thumbUrl: img.thumbUrl || null,
+            thumbPath: img.thumbPath || null,
           }))
         );
       }
@@ -210,14 +202,15 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   function removeImage(key) {
     setImages((prev) => {
       const target = prev.find((i) => i.key === key);
-      if (target?.path) setRemovedPaths((r) => [...r, target.path]);
+      const removed = [target?.path, target?.thumbPath].filter(Boolean);
+      if (removed.length > 0) setRemovedPaths((r) => [...r, ...removed]);
       return prev.filter((i) => i.key !== key);
     });
   }
 
   function clearAllImages() {
     setImages((prev) => {
-      const paths = prev.filter((i) => i.path).map((i) => i.path);
+      const paths = prev.flatMap((i) => [i.path, i.thumbPath]).filter(Boolean);
       if (paths.length > 0) setRemovedPaths((r) => [...r, ...paths]);
       return [];
     });
@@ -258,9 +251,23 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
             const storageRef = ref(storage, path);
             await uploadBytes(storageRef, img.file);
             const url = await getDownloadURL(storageRef);
-            uploadedImages.push({ url, path });
+            const uploaded = { url, path };
+            if (isPdf(img)) {
+              const thumbBlob = await renderPdfFirstPage(img.file);
+              const thumbPath = `${path}-thumb.jpg`;
+              const thumbRef = ref(storage, thumbPath);
+              await uploadBytes(thumbRef, thumbBlob);
+              uploaded.thumbUrl = await getDownloadURL(thumbRef);
+              uploaded.thumbPath = thumbPath;
+            }
+            uploadedImages.push(uploaded);
           } else {
-            uploadedImages.push({ url: img.url, path: img.path || null });
+            const uploaded = { url: img.url, path: img.path || null };
+            if (img.thumbUrl) {
+              uploaded.thumbUrl = img.thumbUrl;
+              uploaded.thumbPath = img.thumbPath || null;
+            }
+            uploadedImages.push(uploaded);
           }
         }
         content = { type: "images", images: uploadedImages };
@@ -448,7 +455,7 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 multiple
                 onChange={handleFilesChange}
                 hidden
@@ -459,11 +466,11 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
                 <div className="creatable-chips">
                   {images.map((img) => (
                     <span className="chip" key={img.key}>
-                      {imageDisplayName(img)}
+                      {assetName(img)}
                       <button
                         type="button"
                         onClick={() => removeImage(img.key)}
-                        aria-label={`Remove ${imageDisplayName(img)}`}
+                        aria-label={`Remove ${assetName(img)}`}
                       >
                         &times;
                       </button>
