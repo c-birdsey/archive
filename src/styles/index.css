@@ -182,7 +182,6 @@ a{ color:inherit; }
      visual spacing comes from padding-top instead. */
   padding:16px 0 8px;
   min-width:100px;
-  background:rgba(255,255,255,0.92);
   z-index:50;
 }
 .nav-add:hover .nav-add-menu,
