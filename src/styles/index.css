@@ -173,22 +173,27 @@ a{ color:inherit; }
 .nav-add{ position:relative; }
 .nav-add-menu{
   display:none;
-  flex-direction:column;
+  flex-direction:row;
+  justify-content:flex-end;
   position:absolute;
   top:100%;
-  left:0;
+  right:0;
   /* Flush against the trigger (no margin gap) so the cursor never leaves
      the hoverable area while moving from "+Add" down into the menu --
      visual spacing comes from padding-top instead. */
   padding:16px 0 8px;
   min-width:100px;
+  gap:16px;
   z-index:50;
 }
 .nav-add:hover .nav-add-menu,
 .nav-add:focus-within .nav-add-menu{
   display:flex;
 }
-.nav-add-menu a{ padding:6px 14px 6px 0; text-align:left; }
+.nav-add-menu a{
+  padding:6px 0;
+  text-align:right;
+}
 
 /* ---------- index page nav row ---------- */
 
@@ -818,29 +823,33 @@ a{ color:inherit; }
 .entry-detail-reverse-related a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
 .entry-detail-reverse-related a:hover{ color:var(--error); text-decoration:line-through; }
 
-/* Gallery: a single column at half the page width, right-anchored --
-   no height restriction, images just fill the full column width and
-   run at their natural aspect ratio. */
+/* Gallery: a single right-anchored column, no height restriction --
+   each image runs at its natural aspect ratio, capped by width only.
+   Portrait images are capped tighter (70vw) than landscape (80vw) since
+   an uncapped portrait image would otherwise run too tall. Orientation
+   is detected client-side on image load (EntryDetailPage.jsx) since
+   it isn't stored data. */
 .entry-detail-gallery{
-  width:50vw;
   margin-left:auto;
   display:flex;
   flex-direction:column;
+  align-items:flex-end;
   gap:24px;
 }
 .entry-detail-gallery-item{
   display:block;
-  width:100%;
   background:none;
   border:none;
   padding:0;
   cursor:pointer;
 }
 .entry-detail-gallery img{
-  width:100%;
-  height:auto;
   display:block;
+  width:auto;
+  height:auto;
+  max-width:65vw;
 }
+.entry-detail-gallery-item.landscape img{ max-width:75vw; }
 .entry-detail-text{
   align-self:stretch;
   font-size:11px;

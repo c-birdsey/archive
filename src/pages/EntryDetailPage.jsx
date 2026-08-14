@@ -19,6 +19,12 @@ export default function EntryDetailPage({ entries, user }) {
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(null);
+  const [orientations, setOrientations] = useState({});
+
+  function handleImageLoad(key, e) {
+    const isLandscape = e.target.naturalWidth >= e.target.naturalHeight;
+    setOrientations((prev) => ({ ...prev, [key]: isLandscape ? "landscape" : "portrait" }));
+  }
 
   const descriptorFields = useDescriptorFields(true);
   const families = useFamilies(true);
@@ -209,16 +215,19 @@ export default function EntryDetailPage({ entries, user }) {
       </aside>
 
       <main className="entry-detail-gallery">
-        {images.map((img, i) => (
-          <button
-            type="button"
-            key={img.path || img.url || i}
-            className="entry-detail-gallery-item"
-            onClick={() => setLightboxIndex(i)}
-          >
-            <img src={img.url} alt="" />
-          </button>
-        ))}
+        {images.map((img, i) => {
+          const key = img.path || img.url || i;
+          return (
+            <button
+              type="button"
+              key={key}
+              className={`entry-detail-gallery-item${orientations[key] === "landscape" ? " landscape" : ""}`}
+              onClick={() => setLightboxIndex(i)}
+            >
+              <img src={img.url} alt="" onLoad={(e) => handleImageLoad(key, e)} />
+            </button>
+          );
+        })}
 
         {entry.content?.type === "text" && (
           <p className="entry-detail-text">{entry.content.body}</p>

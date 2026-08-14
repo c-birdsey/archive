@@ -58,10 +58,10 @@ export default function TopNav({
           <span className={addIsActive ? "nav-add-label active" : "nav-add-label"}>+Add</span>
           <div className="nav-add-menu">
             <NavLink to="/new" className={({ isActive }) => (isActive ? "active" : "")}>
-              {" "}Entry
+              Entry
             </NavLink>
             <NavLink to="/new-family" className={({ isActive }) => (isActive ? "active" : "")}>
-              {" "}Family
+              Family
             </NavLink>
           </div>
         </div>
