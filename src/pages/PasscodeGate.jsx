@@ -23,19 +23,25 @@ export default function PasscodeGate({ onUnlock }) {
   }
 
   return (
-    <div className="lobby">
-      <form className="lobby-card" onSubmit={submit}>
-        <p className="wordmark">Register</p>
+    <div className="overlay">
+      <form className="overlay-bar" onSubmit={submit}>
         <input
           type="password"
+          className="search-overlay-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Passcode"
+          placeholder="Password"
           autoFocus
+          autoComplete="off"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-bwignore="true"
+          data-protonpass-ignore="true"
+          data-form-type="other"
         />
-        <button type="submit" className="solid-btn">Enter</button>
-        {error && <p className="auth-error">Incorrect passcode.</p>}
+        <button type="submit" className="overlay-close">Enter</button>
       </form>
+      {error && <p className="auth-error">Incorrect passcode.</p>}
     </div>
   );
 }

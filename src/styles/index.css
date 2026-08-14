@@ -6,12 +6,20 @@
   --line:#e8e8e8;
   --bg:#fff;
   --error:#b00020;
+  --pink:#d17a9e;
   --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: Georgia, 'Times New Roman', Times, serif;
 }
 
 *{ box-sizing:border-box; }
 
 html, body, #root{ height:100%; }
+
+/* Scrollbar is always hidden (not just when content is short) so its
+   appearance/disappearance never shifts layout. Scrolling still works via
+   wheel/trackpad/keyboard -- this only hides the visual track. */
+html{ scrollbar-width:none; -ms-overflow-style:none; }
+html::-webkit-scrollbar{ display:none; }
 
 body{
   margin:0;
@@ -36,70 +44,152 @@ a{ color:inherit; }
   color:var(--ink);
   cursor:pointer;
 }
-.link-btn:hover{ text-decoration:underline; }
+.link-btn:hover{ color:var(--error); text-decoration:line-through; }
+.link-btn.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.link-btn.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .link-btn:disabled{ color:var(--gray-light); cursor:default; }
 .link-btn:disabled:hover{ text-decoration:none; }
 
-.solid-btn{
-  background:var(--black);
-  color:#fff;
+.primary-btn{
+  background:none;
   border:none;
-  border-radius:0;
-  padding:9px 18px;
-  font-size:13px;
+  padding:0;
+  font-size:14px;
+  font-weight:400;
+  color:var(--ink);
+  text-decoration:underline;
+  text-underline-offset:3px;
   cursor:pointer;
 }
-.solid-btn:hover{ background:#2a2a2a; }
-.solid-btn:disabled{ background:var(--gray-light); cursor:default; }
+.primary-btn:hover{ color:#000; }
+.primary-btn:disabled{ color:var(--gray-light); cursor:default; text-decoration:none; }
 
 .auth-error{ font-size:12px; color:var(--error); margin:10px 0 0; }
 
 /* ---------- page shell ---------- */
 
 .page{
-  max-width:1100px;
-  margin:0 auto;
   padding:32px 32px 100px;
 }
 
 .wordmark{
+  grid-column:1;
+  justify-self:start;
+  font-family:var(--font-serif);
   font-size:14px;
-  font-weight:500;
+  font-weight:400;
   letter-spacing:0.01em;
   text-decoration:none;
   color:var(--ink);
 }
 
+/* 8-column page grid, reflected in the nav row: Register sits in column 1;
+   Index/Families/Search each get their own column (2/3/4), right-aligned;
+   columns 5-6 are deliberately empty; +Add takes column 7; Info + Sign Out
+   share column 8 as a small right-aligned group. */
 .topbar{
-  display:flex;
+  display:grid;
+  grid-template-columns:repeat(8, 1fr);
+  column-gap:24px;
   align-items:baseline;
-  gap:28px;
   padding-bottom:18px;
-  border-bottom:1px solid var(--line);
   margin-bottom:24px;
 }
 
-.page-nav{ display:flex; align-items:center; gap:18px; }
-.page-nav a{
+.page-nav{ display:contents; }
+.page-nav :nth-child(1){ grid-column:2; justify-self:end; }
+.page-nav :nth-child(2){ grid-column:3; justify-self:end; }
+.page-nav :nth-child(3){ grid-column:4; justify-self:end; }
+.page-nav a, .page-nav button{
+  background:none;
+  border:none;
+  padding:0;
+  font-family:var(--font-serif);
   font-size:13px;
   color:var(--gray);
   text-decoration:none;
+  cursor:pointer;
 }
-.page-nav a.active, .page-nav a:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.page-nav a:hover, .page-nav button:hover{ color:var(--error); text-decoration:line-through; }
+.page-nav a.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.page-nav a.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 
-.topbar-right{
+.topbar-signin{
+  grid-column:8;
+  justify-self:end;
+  background:none;
+  border:none;
+  padding:0;
+  font-family:var(--font-serif);
+  font-size:13px;
+  color:var(--ink);
+  cursor:pointer;
+}
+.topbar-signin:hover{ color:var(--error); text-decoration:line-through; }
+.topbar-signin.denied{ color:var(--error); text-decoration:line-through; }
+
+.topbar-right{ display:contents; }
+.topbar-right > :nth-child(1){ grid-column:7; justify-self:end; }
+.topbar-end-group{
+  grid-column:8;
+  justify-self:end;
   display:flex;
   align-items:center;
   gap:18px;
-  margin-left:auto;
 }
 .topbar-right a{
+  font-family:var(--font-serif);
   font-size:13px;
   color:var(--gray);
   text-decoration:none;
 }
-.topbar-right a.active, .topbar-right a:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.topbar-right a:hover{ color:var(--error); text-decoration:line-through; }
+.topbar-right a.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.topbar-right a.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .topbar-right .link-btn{ font-size:13px; }
+
+/* +Add itself is just the hover trigger for the Entry/Family dropdown --
+   not a link to anywhere, so it gets the same look as the other topbar
+   items without the interactive states. */
+.nav-add-label{
+  font-family:var(--font-serif);
+  font-size:13px;
+  color:var(--gray);
+}
+.nav-add-label.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.topbar-right button{
+  background:none;
+  border:none;
+  padding:0;
+  font-family:var(--font-serif);
+  font-size:13px;
+  color:var(--gray);
+  cursor:pointer;
+}
+.topbar-right button:hover{ color:var(--error); text-decoration:line-through; }
+.topbar-right button.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.topbar-right button.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+
+.nav-add{ position:relative; }
+.nav-add-menu{
+  display:none;
+  flex-direction:column;
+  position:absolute;
+  top:100%;
+  left:0;
+  /* Flush against the trigger (no margin gap) so the cursor never leaves
+     the hoverable area while moving from "+Add" down into the menu --
+     visual spacing comes from padding-top instead. */
+  padding:16px 0 8px;
+  min-width:100px;
+  background:rgba(255,255,255,0.92);
+  z-index:50;
+}
+.nav-add:hover .nav-add-menu,
+.nav-add:focus-within .nav-add-menu{
+  display:flex;
+}
+.nav-add-menu a{ padding:6px 14px 6px 0; text-align:left; }
 
 /* ---------- index page nav row ---------- */
 
@@ -109,47 +199,173 @@ a{ color:inherit; }
   flex-wrap:wrap;
   gap:22px;
   padding-bottom:16px;
-  border-bottom:1px solid var(--line);
   margin-bottom:8px;
 }
+.navrow-view-toggle{ margin-left:auto; }
 
 .nav-group{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
 .nav-group button{
   background:none;
   border:none;
   padding:0;
-  font-size:13px;
+  font-size:11px;
   color:var(--gray);
   cursor:pointer;
 }
+.nav-group button:hover{ color:var(--error); text-decoration:line-through; }
 .nav-group button.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
-.nav-group button:hover{ color:var(--ink); }
+.nav-group button.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 
-.navrow input[type=search]{
-  flex:0 1 200px;
-  border:none;
-  border-bottom:1px solid var(--line);
-  padding:4px 0;
-  font-size:13px;
-  background:transparent;
-  margin-left:auto;
+.filter-indicator{ font-size:11px; color:var(--gray); margin:0; }
+.navrow .link-btn{ font-size:11px; }
+
+/* Filters is a full-page overlay (same mechanism as Search/Info/Families)
+   rather than an inline reveal -- columns run large, matching the other
+   overlays' 20px scale, since it now owns the whole screen. */
+.overlay.filters-overlay{ padding-top:96px; }
+.filters-panel{
+  display:flex;
+  flex-wrap:wrap;
+  gap:96px;
 }
-.navrow input[type=search]:focus{ outline:none; border-bottom-color:var(--ink); }
-.navrow input[type=search]::placeholder{ color:var(--gray-light); }
+.filters-column{ display:flex; flex-direction:column; gap:10px; min-width:140px; }
+.filters-column-label{ font-size:20px; font-weight:400; color:var(--ink); margin:0 0 8px; }
+.filters-column button{
+  background:none;
+  border:none;
+  padding:0;
+  text-align:left;
+  font-size:20px;
+  color:var(--gray);
+  cursor:pointer;
+}
+.filters-column button:hover{ color:var(--error); text-decoration:line-through; }
+.filters-column button.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.filters-column button.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.filters-empty{ font-size:16px; color:var(--gray-light); margin:0; }
+.filters-column .creatable{ min-width:200px; }
+.filters-column .creatable-chips input{ font-size:20px; }
 
-.filter-indicator{ font-size:13px; color:var(--gray); margin:0; }
+/* ---------- full-page overlay ---------- */
+/* Shared by Search, Info, and New/Edit Entry -- a fixed, near-opaque
+   panel that covers the whole viewport (including the nav, which stays
+   mounted underneath and shows through faintly). Each has its own
+   .overlay-bar header: a title (+ Submit, for the entry form) on the
+   left, Close pinned to the right. */
+
+.overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(255,255,255,0.88);
+  z-index:200;
+  overflow-y:auto;
+  padding:32px;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.overlay::-webkit-scrollbar{ display:none; }
+
+.overlay-bar{
+  display:flex;
+  align-items:baseline;
+  gap:24px;
+  margin-bottom:32px;
+}
+.overlay-title{ font-size:20px; font-weight:400; margin:0; color:var(--ink); }
+.overlay-submit{
+  background:none;
+  border:none;
+  padding:0;
+  font-size:20px;
+  font-family:inherit;
+  color:var(--pink);
+  cursor:pointer;
+}
+.overlay-submit:hover{ color:var(--error); text-decoration:line-through; }
+.overlay-submit:disabled{ color:var(--gray-light); cursor:default; }
+.overlay-close{
+  margin-left:auto;
+  flex-shrink:0;
+  background:none;
+  border:none;
+  padding:0;
+  font-size:20px;
+  font-family:inherit;
+  color:var(--ink);
+  cursor:pointer;
+}
+.overlay-close:hover{ color:var(--error); text-decoration:line-through; }
+.overlay-close-floating{
+  position:absolute;
+  top:32px;
+  right:32px;
+  margin-left:0;
+}
+
+.search-overlay-input{
+  flex:1;
+  border:none;
+  background:transparent;
+  font-size:20px;
+  font-weight:400;
+  line-height:1.1;
+  color:rgba(0,0,0,0.5);
+}
+.search-overlay-input::-webkit-search-cancel-button{ -webkit-appearance:none; }
+.search-overlay-input:focus{ outline:none; }
+.search-overlay-input::placeholder{ color:var(--gray-light); }
+
+.search-result-row{ grid-template-columns:1fr; border-bottom:none; font-size:20px; }
 .filter-indicator .link-btn{ font-size:13px; }
 
 /* ---------- list view ---------- */
 
+.letter-grouped{ position:relative; }
+
 .letter-group{ margin-bottom:8px; }
 .letter-head{
   font-size:32px;
-  font-weight:500;
+  font-weight:400;
   margin:36px 0 6px;
   color:var(--black);
 }
 .letter-group:first-child .letter-head{ margin-top:20px; }
+
+.az-rail{
+  position:fixed;
+  top:50%;
+  right:12px;
+  transform:translateY(-50%);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+.az-rail button{
+  background:none;
+  border:none;
+  padding:1px 4px;
+  font-size:10px;
+  line-height:1.3;
+  color:var(--gray);
+  cursor:pointer;
+}
+.az-rail button:hover{ color:var(--error); text-decoration:line-through; }
+.az-rail button:disabled{ color:var(--line); cursor:default; }
+
+.scroll-top-btn{
+  position:fixed;
+  left:32px;
+  bottom:32px;
+  z-index:50;
+  background:none;
+  border:none;
+  padding:0;
+  font-size:20px;
+  color:var(--gray);
+  cursor:pointer;
+}
+.scroll-top-btn:hover{ color:var(--ink); }
 
 .list-row{
   display:grid;
@@ -165,9 +381,7 @@ a{ color:inherit; }
   text-align:left;
   font-size:14px;
 }
-.list-row:hover .row-title{ text-decoration:underline; }
-
-.family-row{ grid-template-columns:1fr; }
+.list-row:hover .row-title{ color:var(--error); text-decoration:line-through; }
 
 .row-title-cell{ min-width:0; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .row-title{ color:var(--ink); }
@@ -175,31 +389,56 @@ a{ color:inherit; }
 .row-author{ color:var(--gray); font-size:13px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
 .row-year{ color:var(--gray); font-size:13px; text-align:right; }
 
+/* Families overlay row: Title | Description | poster+date, matching the
+   Search overlay's larger 20px row size and border-free rows. */
+.family-overlay-row{
+  grid-template-columns:280px 1fr auto;
+  gap:24px;
+  border-bottom:none;
+  font-size:20px;
+}
+.family-overlay-row .row-description{ color:var(--gray); overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.family-overlay-row .row-posted{ color:var(--gray); text-align:right; white-space:nowrap; }
+
 /* ---------- images view ---------- */
 
+/* Matches hicarquitectura.com's grid: 3 fixed-width columns, and every
+   tile is the same fixed-ratio box regardless of the image's own
+   orientation -- portrait and landscape images both letterbox inside it
+   (contain, never crop/stretch), so rows line up and text aligns below. */
 .images-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
-  gap:32px 20px;
-  margin-top:24px;
+  grid-template-columns:repeat(3, 1fr);
+  column-gap:64px;
+  row-gap:80px;
+  margin-top:64px;
+  padding:0 48px;
 }
 .image-tile{
+  display:block;
   cursor:pointer;
   background:none;
   border:none;
   padding:0;
-  text-align:left;
+  text-align:center;
   width:100%;
 }
-.image-tile img{
-  width:100%;
-  aspect-ratio:1;
-  object-fit:cover;
-  display:block;
+.image-frame{
+  aspect-ratio:8 / 5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
   margin-bottom:8px;
 }
+.image-frame img{
+  max-width:100%;
+  max-height:100%;
+  width:auto;
+  height:auto;
+  display:block;
+}
 .image-tile.no-image .no-image-inner{
-  aspect-ratio:1;
+  aspect-ratio:8 / 5;
   border:1px solid rgba(0,0,0,0.15);
   display:flex;
   align-items:center;
@@ -225,147 +464,207 @@ a{ color:inherit; }
 }
 .empty-state p{ margin:0 0 10px; }
 
-/* ---------- about page ---------- */
+/* ---------- 3-column content shell ---------- */
+/* Shared by About, New Entry, and Entry detail -- the whole site runs
+   full width; this shell just gives these pages a left/center/right
+   column rhythm, like HIC. */
 
-.about-page{
-  max-width:560px;
-  padding-top:8px;
-  font-size:14px;
-  line-height:1.7;
+.content-shell{
+  display:grid;
+  grid-template-columns:200px 1fr 200px;
+  gap:48px;
+}
+.content-col-left{ min-width:0; }
+.content-col-center{ min-width:0; }
+.content-col-right{ min-width:0; }
+
+/* ---------- info page ---------- */
+/* Single top-left column, no header/title -- Close is the only thing
+   in .overlay-bar here, pinned to the right by its own margin-left:auto. */
+
+.info-content p{
+  max-width:960px;
+  font-size:20px;
+  line-height:1.6;
+  color:rgba(0,0,0,0.5);
+  margin:0 0 24px;
+}
+.info-content .info-update{ font-size:11px; }
+
+/* ---------- landing page ---------- */
+/* Bare welcome screen -- nav plus a mission-statement tagline pinned to
+   the bottom-left, everything else deliberately empty. */
+
+.landing-page{
+  position:fixed;
+  left:32px;
+  right:32px;
+  bottom:32px;
+}
+.landing-page .info-content p{
+  margin:0;
+  max-width:75%;
   color:var(--ink);
 }
-.about-page p{ margin:0 0 20px; }
-.about-page .about-version{ font-size:12px; color:var(--gray); margin-top:32px; }
-.signout-inline{
-  display:block;
-  background:none;
-  border:none;
-  padding:0;
-  margin-top:8px;
-  font-size:12px;
-  color:var(--gray-light);
-  cursor:pointer;
-}
-.signout-inline:hover{ color:var(--gray); text-decoration:underline; }
+.landing-page .info-content a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.landing-page .info-content a:hover{ color:var(--error); text-decoration:line-through; }
+.landing-inline-link{ font-size:inherit; color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.landing-inline-link:hover{ color:var(--error); text-decoration:line-through; }
+.landing-notice{ margin:12px 0 0; font-size:16px; color:var(--error); }
+.landing-notice .link-btn{ color:inherit; }
 
 /* ---------- forms ---------- */
 
-.form-page{ max-width:520px; padding-top:8px; }
-.page-title{ font-size:20px; font-weight:500; margin:0 0 24px; }
+.form-page{ padding-top:8px; }
+.page-title{ font-size:20px; font-weight:400; margin:0 0 24px; }
 
+/* New Entry sits on the same 8-column grid as the nav: the Primative and
+   Family fieldsets each take the full width (their own content just hugs
+   the left edge), while .entry-form-row lays its fields out one per
+   column so Title/Author/Year/etc each get a dedicated column. */
+.entry-form{
+  display:grid;
+  grid-template-columns:repeat(8, 1fr);
+  column-gap:24px;
+}
+.entry-form .overlay-bar{ grid-column:1 / 9; }
+.entry-form .family-field{ grid-column:1 / 9; }
+.entry-form-full{ grid-column:1 / 9; }
+.entry-form-row{
+  grid-column:1 / 9;
+  display:grid;
+  grid-template-columns:repeat(8, 1fr);
+  column-gap:24px;
+  margin-bottom:28px;
+}
+.entry-form-row .field{ margin-bottom:0; }
+
+/* Every label, value, and placeholder in this form reads at one size --
+   no borders, boxes, or underlines on the inputs themselves, matching the
+   plain/borderless treatment used by the search input. */
 .entry-form .field{
   display:block;
   margin-bottom:20px;
-  font-size:12px;
+  font-size:16px;
   color:var(--gray);
 }
-.entry-form .field > span{ display:block; margin-bottom:6px; }
+.entry-form .field > span{ display:block; margin-bottom:6px; font-size:16px; color:var(--ink); }
 
 .entry-form input[type=text],
 .entry-form input[type=url],
 .entry-form textarea{
   display:block;
   width:100%;
-  font-size:14px;
-  color:var(--ink);
-  padding:7px 0;
+  font-size:16px;
+  color:rgba(0,0,0,0.5);
+  padding:0;
   border:none;
-  border-bottom:1px solid var(--line);
-  border-radius:0;
   background:transparent;
 }
-.entry-form textarea{ resize:vertical; border:1px solid var(--line); padding:10px; }
-.entry-form input:focus, .entry-form textarea:focus{ outline:none; border-color:var(--ink); }
-.entry-form input[type=file]{ font-size:13px; }
+.entry-form textarea{ resize:vertical; }
+.entry-form input:focus, .entry-form textarea:focus{ outline:none; }
+.entry-form input[type=file]{ font-size:16px; }
 .entry-form select{
   display:block;
   width:100%;
-  font-size:14px;
-  color:var(--ink);
-  padding:7px 0;
+  font-size:16px;
+  color:rgba(0,0,0,0.5);
+  padding:0;
   border:none;
-  border-bottom:1px solid var(--line);
-  border-radius:0;
   background:transparent;
+  appearance:none;
+  -webkit-appearance:none;
 }
-.entry-form select:focus{ outline:none; border-color:var(--ink); }
+.entry-form select:focus{ outline:none; }
+.entry-form .creatable-chips input{ font-size:16px; }
+.entry-form input::placeholder,
+.entry-form textarea::placeholder{ color:rgba(0,0,0,0.25); opacity:1; }
 
 .family-field{ border:none; margin:0 0 20px; padding:0; }
-.family-field legend{ font-size:12px; color:var(--gray); margin-bottom:6px; padding:0; }
+.family-field legend{ font-size:16px; color:var(--ink); margin-bottom:6px; padding:0; }
+
+/* Plain clickable text lists for fixed-option fields (Primative, and the
+   per-primative Medium/Status choices) -- same interaction as the Filters
+   panel, no radio circles. */
+.choice-list{ display:flex; flex-direction:column; gap:2px; }
+.choice-list button{
+  background:none;
+  border:none;
+  padding:0;
+  text-align:left;
+  font-size:16px;
+  color:var(--gray);
+  cursor:pointer;
+}
+.choice-list button:hover{ color:var(--error); text-decoration:line-through; }
+.choice-list button.active{ color:var(--ink); }
+
 .radio-row{
   display:flex;
   align-items:center;
   gap:8px;
-  font-size:14px;
+  font-size:16px;
   color:var(--ink);
   margin-bottom:6px;
 }
+.radio-row input[type=radio]{
+  appearance:none;
+  -webkit-appearance:none;
+  width:14px;
+  height:14px;
+  margin:0;
+  border:1px solid var(--gray-light);
+  border-radius:50%;
+  position:relative;
+  cursor:pointer;
+  flex-shrink:0;
+}
+.radio-row input[type=radio]:hover{ border-color:var(--gray); }
+.radio-row input[type=radio]:checked{ border-color:var(--ink); }
+.radio-row input[type=radio]:checked::after{
+  content:"";
+  position:absolute;
+  inset:3px;
+  background:var(--ink);
+  border-radius:50%;
+}
 .family-new-fields{ display:flex; flex-direction:column; gap:8px; margin:8px 0 0 22px; }
 .family-new-fields input{
-  font-size:14px;
-  color:var(--ink);
-  padding:7px 0;
+  font-size:16px;
+  color:rgba(0,0,0,0.5);
+  padding:0;
   border:none;
-  border-bottom:1px solid var(--line);
   background:transparent;
 }
-.family-new-fields input:focus{ outline:none; border-color:var(--ink); }
+.family-new-fields input:focus{ outline:none; }
 
-.image-manager{
-  display:flex;
-  flex-wrap:wrap;
-  gap:10px;
-  margin:8px 0 10px;
-}
-.image-item{
-  position:relative;
-  width:96px;
-  height:96px;
-  cursor:grab;
-}
-.image-item:active{ cursor:grabbing; }
-.image-item img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  border:1px solid var(--line);
-}
-.image-item.primary img{ border-color:var(--ink); }
-.primary-tag{
-  position:absolute;
-  bottom:4px;
-  left:4px;
-  font-size:10px;
-  letter-spacing:0.02em;
-  text-transform:uppercase;
-  background:var(--ink);
-  color:#fff;
-  padding:2px 5px;
-}
-.image-remove{
-  position:absolute;
-  top:-8px;
-  right:-8px;
-  width:20px;
-  height:20px;
-  border-radius:50%;
-  background:var(--ink);
-  color:#fff;
-  border:1px solid #fff;
-  font-size:14px;
-  line-height:1;
-  cursor:pointer;
+.field-label-row{ display:flex; align-items:baseline; gap:12px; margin-bottom:6px; }
+.field-label-row span{ font-size:16px; color:var(--ink); margin-bottom:0; }
+.asset-upload-label{ cursor:pointer; }
+.asset-upload-label:hover{ color:var(--error); text-decoration:line-through; }
+.asset-empty{ font-size:16px; color:rgba(0,0,0,0.25); margin:0; }
+
+/* Primative Type leads the form -- extra space below it sets it apart
+   from the rest of the fields as the more important, gating choice. */
+.field-primative{ margin-bottom:48px; }
+.info-icon-btn{
   display:flex;
   align-items:center;
   justify-content:center;
-}
-.image-remove:hover{ background:#2a2a2a; }
-.field-hint{
+  width:16px;
+  height:16px;
+  border:1px solid var(--gray-light);
+  border-radius:50%;
+  background:none;
+  padding:0;
   font-size:11px;
-  color:var(--gray-light);
-  margin:6px 0 0;
+  line-height:1;
+  font-family:Georgia, 'Times New Roman', Times, serif;
+  color:var(--gray);
+  cursor:pointer;
+  flex-shrink:0;
 }
+.info-icon-btn:hover{ border-color:var(--error); color:var(--error); }
 
 .form-actions{
   display:flex;
@@ -398,27 +697,39 @@ a{ color:inherit; }
 }
 .chip button:hover{ color:var(--ink); }
 
-.creatable > input{
-  width:100%;
+.creatable-chips input{
+  flex:1;
+  min-width:100px;
   font-size:14px;
-  padding:7px 0;
+  padding:0;
   border:none;
-  border-bottom:1px solid var(--line);
   background:transparent;
 }
-.creatable > input:focus{ outline:none; border-color:var(--ink); }
+.creatable-chips input:focus{ outline:none; }
 
 .creatable-menu{
   position:absolute;
   z-index:10;
   top:100%;
   left:0;
-  right:0;
-  background:#fff;
-  border:1px solid var(--ink);
+  width:420px;
+  max-width:100%;
+  background:rgba(255,255,255,0.92);
   max-height:200px;
   overflow-y:auto;
   margin-top:2px;
+  scrollbar-width:none;
+  -ms-overflow-style:none;
+}
+.creatable-menu::-webkit-scrollbar{ display:none; }
+/* Opens above the input instead of below -- for fields that sit near the
+   bottom of the viewport (e.g. the entry detail sidebar's fixed-height
+   bottom block), where a downward menu would run off-screen. */
+.creatable-menu-up{
+  top:auto;
+  bottom:100%;
+  margin-top:0;
+  margin-bottom:2px;
 }
 .creatable-option{
   display:block;
@@ -426,78 +737,172 @@ a{ color:inherit; }
   text-align:left;
   background:none;
   border:none;
-  padding:8px 10px;
-  font-size:13px;
+  padding:6px 10px;
+  font-size:11px;
+  font-weight:400;
   color:var(--ink);
   cursor:pointer;
 }
-.creatable-option:hover{ background:#f4f4f4; }
+.creatable-option:hover{ color:var(--error); text-decoration:line-through; }
 .creatable-new{ color:var(--gray); font-style:italic; }
+.creatable-new:hover{ color:var(--error); }
 
 /* ---------- entry detail ---------- */
+/* The sidebar is one continuous flowing column -- sticky as a whole
+   while the gallery scrolls past on the right -- with four sections in
+   order: date/Edit/Delete, name + description, metadata (descriptors),
+   then connections (tags/related/families). Text runs at the same small
+   scale as the Index page's filter text. */
 
-.entry-detail{ max-width:880px; padding-top:8px; }
-.entry-detail-meta{
+.entry-detail{
   display:flex;
-  gap:16px;
-  font-size:12px;
-  color:var(--gray);
-  margin-bottom:20px;
-}
-
-.entry-detail-primary{
-  display:flex;
+  align-items:flex-start;
   gap:48px;
-  margin-bottom:32px;
 }
-.entry-detail-main{ flex:1 1 auto; min-width:0; max-width:640px; }
+
 .entry-detail-sidebar{
-  width:220px;
+  position:sticky;
+  top:32px;
   flex-shrink:0;
-  padding-left:32px;
-  border-left:1px solid var(--line);
+  width:300px;
 }
 
-.entry-detail-image{ width:100%; display:block; margin-bottom:20px; }
-.entry-detail-title{ font-size:30px; font-weight:500; line-height:1.2; margin:0 0 20px; }
-.view-url{ font-size:13px; color:var(--ink); word-break:break-all; display:inline-block; margin-top:4px; text-decoration:underline; }
-.entry-detail-text{ font-size:14px; line-height:1.7; white-space:pre-wrap; margin:0; }
+/* Shared by both Entry Detail and Family Detail headers: a small
+   date/Edit/Delete row, then a title | description line below it (the
+   description trails inline rather than as its own block -- in the
+   narrow entry sidebar this just wraps to a new line, which is fine). */
+.detail-poster-row{
+  display:flex;
+  flex-wrap:wrap;
+  align-items:baseline;
+  gap:10px;
+  font-size:11px;
+  color:var(--gray);
+  margin-bottom:12px;
+}
+.detail-poster-row .link-btn{ font-size:11px; }
 
-.entry-detail-descriptors{ margin:0 0 24px; }
-.entry-detail-descriptors > div{ margin-bottom:10px; font-size:13px; }
-.entry-detail-descriptors dt{ color:var(--gray); margin:0 0 2px; }
+.detail-heading{ font-size:13px; color:var(--ink); margin:0 0 12px; }
+.detail-heading .detail-heading-desc{ color:var(--gray); }
+
+.entry-detail-descriptors{ margin:0 0 12px; }
+.entry-detail-descriptors > div{
+  display:flex;
+  gap:6px;
+  margin-bottom:2px;
+  font-size:11px;
+}
+.entry-detail-descriptors dt{ color:var(--gray); margin:0; }
+.entry-detail-descriptors dt::after{ content:"|"; margin-left:6px; color:var(--gray-light); }
 .entry-detail-descriptors dd{ margin:0; color:var(--ink); }
-.entry-detail-descriptors dd a{ color:inherit; text-decoration:none; }
-.entry-detail-descriptors dd a:hover{ text-decoration:underline; text-underline-offset:2px; }
+.entry-detail-descriptors dd a{ color:inherit; text-decoration:none; cursor:pointer; }
+.entry-detail-descriptors dd a:hover{ color:var(--error); text-decoration:line-through; }
 
-.entry-detail-tags-editor{ font-size:13px; }
-.entry-detail-tags-editor .chip a{ color:inherit; text-decoration:none; }
-.entry-detail-tags-editor .chip a:hover{ text-decoration:underline; text-underline-offset:2px; }
+.view-url{ font-size:11px; color:var(--ink); word-break:break-all; display:inline-block; margin-top:4px; text-decoration:underline; }
+.view-url:hover{ color:var(--error); text-decoration:line-through; }
 
-/* tertiary: de-emphasized, below the primary two-column zone */
-.entry-detail-tertiary{ max-width:640px; }
-.entry-detail-notes{ font-size:13px; line-height:1.7; white-space:pre-wrap; color:var(--gray); margin:0 0 18px; }
+.entry-detail-inline-field{ font-size:11px; margin-bottom:10px; }
+.entry-detail-inline-field > span{ display:block; margin-bottom:3px; color:var(--ink); }
+.entry-detail-inline-field .creatable-chips{ gap:2px 10px; }
+.entry-detail-inline-field .chip{
+  border:none;
+  padding:0;
+  gap:4px;
+  font-size:11px;
+}
+.entry-detail-inline-field .chip a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.entry-detail-inline-field .chip a:hover{ color:var(--error); text-decoration:line-through; }
+.entry-detail-inline-field .chip button{ color:var(--gray-light); }
+.entry-detail-inline-field .chip button:hover{ color:var(--gray); }
+.entry-detail-inline-field input{ font-size:11px; padding:3px 0; }
+.entry-detail-reverse-related{ font-size:11px; color:var(--gray); margin:4px 0 0; }
+.entry-detail-reverse-related a{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+.entry-detail-reverse-related a:hover{ color:var(--error); text-decoration:line-through; }
 
-.tag-page-heading{ font-size:13px; color:var(--gray); margin:0; }
-.tag-page-back{ margin-left:auto; }
+/* Gallery: a single column at half the page width, right-anchored --
+   no height restriction, images just fill the full column width and
+   run at their natural aspect ratio. */
+.entry-detail-gallery{
+  width:50vw;
+  margin-left:auto;
+  display:flex;
+  flex-direction:column;
+  gap:24px;
+}
+.entry-detail-gallery-item{
+  display:block;
+  width:100%;
+  background:none;
+  border:none;
+  padding:0;
+  cursor:pointer;
+}
+.entry-detail-gallery img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+.entry-detail-text{
+  align-self:stretch;
+  font-size:11px;
+  line-height:1.5;
+  white-space:pre-wrap;
+  margin:0;
+  text-align:left;
+}
 
-.entry-detail-related{ margin-bottom:18px; }
-.related-label{ font-size:12px; color:var(--gray); margin:0 0 8px; }
-.entry-detail-related ul{ list-style:none; margin:0; padding:0; }
-.entry-detail-related li{ margin-bottom:4px; }
-.entry-detail-related a{ font-size:13px; color:var(--gray); text-decoration:underline; text-underline-offset:2px; }
+/* ---------- lightbox ---------- */
 
-.entry-detail-families{ font-size:13px; color:var(--gray); margin:0 0 18px; }
-.entry-detail-families a{ color:var(--gray); text-decoration:underline; text-underline-offset:2px; }
-
-.view-actions{ display:flex; gap:20px; border-top:1px solid var(--line); padding-top:16px; }
+.lightbox{
+  position:fixed;
+  inset:0;
+  z-index:300;
+  background:rgba(255,255,255,0.96);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.lightbox img{
+  max-width:88vw;
+  max-height:88vh;
+  width:auto;
+  height:auto;
+  display:block;
+}
+.lightbox-close{
+  position:absolute;
+  top:32px;
+  right:32px;
+  background:none;
+  border:none;
+  padding:0;
+  font-size:28px;
+  line-height:1;
+  color:var(--ink);
+  cursor:pointer;
+}
+.lightbox-close:hover{ color:var(--error); }
+.lightbox-arrow{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  background:none;
+  border:none;
+  padding:0;
+  font-size:32px;
+  line-height:1;
+  color:var(--gray);
+  cursor:pointer;
+}
+.lightbox-arrow:hover{ color:var(--ink); }
+.lightbox-prev{ left:32px; }
+.lightbox-next{ right:32px; }
 
 /* ---------- family detail ---------- */
 
-.family-detail{ max-width:640px; padding-top:8px; margin-bottom:32px; }
-.family-detail-description{ font-size:14px; line-height:1.7; color:var(--gray); margin:0; }
+.family-detail-header{ margin-bottom:12px; }
 
-/* ---------- lobby / passcode / sign-in / mobile block ---------- */
+/* ---------- lobby / mobile block ---------- */
 
 .lobby{
   min-height:100vh;
@@ -516,14 +921,4 @@ a{ color:inherit; }
   gap:16px;
 }
 .lobby-card .wordmark{ font-size:20px; margin-bottom:4px; }
-.lobby-card input[type=password]{
-  width:100%;
-  text-align:center;
-  border:none;
-  border-bottom:1px solid var(--line);
-  padding:8px 0;
-  font-size:14px;
-  background:transparent;
-}
-.lobby-card input[type=password]:focus{ outline:none; border-bottom-color:var(--ink); }
 .mobile-message{ font-size:13px; color:var(--gray); line-height:1.6; }

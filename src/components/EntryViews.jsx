@@ -41,7 +41,9 @@ export function ImagesView({ entries, onOpen }) {
             onClick={() => onOpen(entry.id)}
           >
             {coverUrl ? (
-              <img src={coverUrl} alt="" loading="lazy" />
+              <div className="image-frame">
+                <img src={coverUrl} alt="" loading="lazy" />
+              </div>
             ) : (
               <div className="no-image-inner">
                 <p>{entry.title}</p>

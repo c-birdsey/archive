@@ -1,12 +1,14 @@
-import { useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { ImagesView } from "../components/EntryViews.jsx";
 import { useFamilies } from "../hooks/useFamilies.js";
+import { deleteFamily } from "../data/families.js";
 
-export default function FamilyDetailPage({ entries }) {
+export default function FamilyDetailPage({ entries, onFamiliesClick }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const families = useFamilies(true);
+  const [deleting, setDeleting] = useState(false);
 
   const family = useMemo(() => families.find((f) => f.id === id), [families, id]);
   const members = useMemo(() => {
@@ -18,22 +20,40 @@ export default function FamilyDetailPage({ entries }) {
     return (
       <main className="entry-detail">
         <p>This family doesn't exist, or has been deleted.</p>
-        <Link className="link-btn" to="/families">Back to families</Link>
+        <button type="button" className="link-btn" onClick={onFamiliesClick}>Back to families</button>
       </main>
     );
   }
 
+  async function handleDelete() {
+    if (!confirm("Delete this family? This can't be undone.")) return;
+    setDeleting(true);
+    try {
+      await deleteFamily(family.id);
+      navigate("/index");
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+      setDeleting(false);
+    }
+  }
+
   return (
     <>
-      <nav className="navrow">
-        <p className="tag-page-heading">Family</p>
-        <Link className="link-btn tag-page-back" to="/families">Back to families</Link>
-      </nav>
-
-      <main className="family-detail">
-        <h1 className="entry-detail-title">{family.name}</h1>
-        {family.description && <p className="family-detail-description">{family.description}</p>}
-      </main>
+      <div className="family-detail-header">
+        <div className="detail-poster-row">
+          <span>{fullDate(family.createdAt)}</span>
+          <button type="button" className="link-btn" onClick={() => navigate(`/family/${family.id}/edit`)}>
+            Edit
+          </button>
+          <button type="button" className="link-btn" onClick={handleDelete} disabled={deleting}>
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+        <p className="detail-heading">
+          {family.name}
+          {family.description && <span className="detail-heading-desc"> | {family.description}</span>}
+        </p>
+      </div>
 
       {members.length === 0 ? (
         <div className="empty-state">
@@ -44,4 +64,9 @@ export default function FamilyDetailPage({ entries }) {
       )}
     </>
   );
+}
+
+function fullDate(d) {
+  const date = d?.toDate ? d.toDate() : new Date(d || Date.now());
+  return date.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 }

@@ -66,6 +66,12 @@ export async function updateTags(id, tags) {
   await updateDoc(doc(db, COLLECTION, id), { tags: tags || [], updatedAt: serverTimestamp() });
 }
 
+// Same narrow-partial-update pattern as updateTags(), for the entry page's
+// inline related-entries editor.
+export async function updateRelated(id, relatedIds) {
+  await updateDoc(doc(db, COLLECTION, id), { relatedIds: relatedIds || [], updatedAt: serverTimestamp() });
+}
+
 export async function deleteEntry(entry) {
   await deleteDoc(doc(db, COLLECTION, entry.id));
   if (entry.content?.type === "images") {

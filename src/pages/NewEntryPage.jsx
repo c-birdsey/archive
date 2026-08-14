@@ -11,7 +11,78 @@ import {
 import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { useFamilies } from "../hooks/useFamilies.js";
 
-export default function NewEntryPage({ entries, user }) {
+// Fixed-option fields render as a plain clickable list (like the Filters
+// panel) instead of a free-text input.
+const CHOICE_OPTIONS = {
+  primative: ["Physical", "Representational", "Discursive"],
+  medium: ["Drawing", "Model", "Painting", "Photograph", "Sculpture"],
+  status: ["Built", "Unbuilt", "Demolished", "In Progress"],
+};
+
+const FIELD_PLACEHOLDERS = {
+  author: "Name",
+  year: "YYYY",
+  project: "Project",
+  collaborator: "Name(s)",
+  source: "URL",
+  location: "Municipality, Country",
+};
+
+// Hints for LastPass/1Password/Bitwarden/Dashlane/Proton Pass to leave
+// these fields alone -- none of them are logins, but password managers
+// often misidentify plain text/URL inputs and clutter them with icons.
+const NO_AUTOFILL = {
+  autoComplete: "off",
+  "data-lpignore": "true",
+  "data-1p-ignore": "true",
+  "data-bwignore": "true",
+  "data-protonpass-ignore": "true",
+  "data-form-type": "other",
+};
+
+// Only the fields relevant to the selected primative show, in order:
+// Author/Year always lead, then the primative-specific field (Medium for
+// Representational, Location for Physical, Source for Discursive), then
+// Project, then Status (Physical only), then Collaborator, then Source
+// again (unless it was already used above as the primative field).
+function buildFieldRow(primative, descriptorFields) {
+  const byKey = Object.fromEntries(descriptorFields.map((f) => [f.key, f]));
+  const used = new Set(["primative"]);
+  const row = [];
+
+  function add(key) {
+    const f = byKey[key];
+    if (f && !used.has(key)) {
+      row.push(f);
+      used.add(key);
+    }
+  }
+
+  add("author");
+  add("year");
+  if (primative === "Representational") add("medium");
+  else if (primative === "Physical") add("location");
+  else if (primative === "Discursive") add("source");
+  add("project");
+  if (primative === "Physical") add("status");
+  add("collaborator");
+  if (primative !== "Discursive") add("source");
+
+  return row;
+}
+
+// A new upload has a File, so its name is straightforward. An existing
+// (already-saved) image only has a storage path/url; strip the
+// "<timestamp>-<random>-" prefix NewEntryPage writes on upload so it
+// reads as a plain filename either way.
+function imageDisplayName(img) {
+  if (img.file) return img.file.name;
+  const source = img.path || img.url || "image";
+  const last = decodeURIComponent(source.split("/").pop().split("?")[0]);
+  return last.replace(/^\d+-[a-z0-9]+-/, "");
+}
+
+export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const { id } = useParams(); // present when editing
   const navigate = useNavigate();
   const isEditing = Boolean(id);
@@ -26,27 +97,38 @@ export default function NewEntryPage({ entries, user }) {
   const [related, setRelated] = useState([]); // array of entry ids
   const [descriptorValues, setDescriptorValues] = useState({});
 
-  const [contentType, setContentType] = useState("none"); // none | text | images
-  const [body, setBody] = useState("");
+  // Entries created before this rebuild may carry text-only content; the
+  // form no longer offers creating/editing that, but preserves it
+  // untouched on save unless images are added (which replaces it).
+  const [preservedTextContent, setPreservedTextContent] = useState(null);
 
   // Each item: { key, url (preview or existing download URL), file? (new upload), path? (existing storage path) }
   // Order matters — images[0] is the primary/cover image.
   const [images, setImages] = useState([]);
   const [removedPaths, setRemovedPaths] = useState([]); // existing storage paths to delete on save
-  const dragIndex = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // A single-choice radio in the UI; the data model allows an entry to
-  // belong to more than one family, but only the first membership found
-  // is surfaced here to prefill editing.
-  const [familyChoice, setFamilyChoice] = useState("none"); // none | existing:<id> | new
-  const [originalFamilyId, setOriginalFamilyId] = useState(null);
-  const [newFamilyName, setNewFamilyName] = useState("");
-  const [newFamilyDesc, setNewFamilyDesc] = useState("");
+  // A multi-select search field, matching the data model: an entry can
+  // belong to any number of families. Each value is either an existing
+  // family's id or a freshly-typed name (created on submit).
+  const [familyIds, setFamilyIds] = useState([]);
+  const [originalFamilyIds, setOriginalFamilyIds] = useState([]);
   const familyPrefilled = useRef(false);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
+
+  // If the Info popup is open on top of this form, let its own Escape
+  // handler close that first rather than also navigating away here.
+  useEffect(() => {
+    if (infoOpen) return;
+    function onKeyDown(e) {
+      if (e.key === "Escape") navigate(-1);
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [infoOpen, navigate]);
 
   useEffect(() => {
     if (!isEditing) return;
@@ -66,10 +148,8 @@ export default function NewEntryPage({ entries, user }) {
       setDescriptorValues(data.descriptors || {});
 
       if (data.content?.type === "text") {
-        setContentType("text");
-        setBody(data.content.body || "");
+        setPreservedTextContent(data.content);
       } else if (data.content?.type === "images") {
-        setContentType("images");
         setImages(
           (data.content.images || []).map((img, i) => ({
             key: img.path || img.url || `existing-${i}`,
@@ -84,10 +164,10 @@ export default function NewEntryPage({ entries, user }) {
 
   useEffect(() => {
     if (!isEditing || familyPrefilled.current || families.length === 0) return;
-    const owning = getFamiliesForEntry(id, families)[0];
-    if (owning) {
-      setOriginalFamilyId(owning.id);
-      setFamilyChoice(`existing:${owning.id}`);
+    const owning = getFamiliesForEntry(id, families).map((f) => f.id);
+    if (owning.length > 0) {
+      setOriginalFamilyIds(owning);
+      setFamilyIds(owning);
     }
     familyPrefilled.current = true;
   }, [isEditing, id, families]);
@@ -103,6 +183,17 @@ export default function NewEntryPage({ entries, user }) {
       .map((e) => ({ value: e.id, label: e.title }))
       .sort((a, b) => a.label.localeCompare(b.label));
   }, [entries, id]);
+
+  const familyOptions = useMemo(
+    () => families.map((f) => ({ value: f.id, label: f.name })).sort((a, b) => a.label.localeCompare(b.label)),
+    [families]
+  );
+
+  const primativeField = descriptorFields.find((f) => f.key === "primative");
+  const fieldRow = useMemo(
+    () => buildFieldRow(descriptorValues.primative, descriptorFields),
+    [descriptorValues.primative, descriptorFields]
+  );
 
   function handleFilesChange(e) {
     const files = Array.from(e.target.files || []);
@@ -124,35 +215,27 @@ export default function NewEntryPage({ entries, user }) {
     });
   }
 
-  function handleDragStart(index) {
-    dragIndex.current = index;
-  }
-  function handleDragOver(e) {
-    e.preventDefault();
-  }
-  function handleDrop(index) {
+  function clearAllImages() {
     setImages((prev) => {
-      if (dragIndex.current === null || dragIndex.current === index) return prev;
-      const arr = [...prev];
-      const [moved] = arr.splice(dragIndex.current, 1);
-      arr.splice(index, 0, moved);
-      return arr;
+      const paths = prev.filter((i) => i.path).map((i) => i.path);
+      if (paths.length > 0) setRemovedPaths((r) => [...r, ...paths]);
+      return [];
     });
-    dragIndex.current = null;
   }
 
   async function syncFamily(entryId) {
-    if (familyChoice.startsWith("existing:")) {
-      const familyId = familyChoice.split(":")[1];
-      if (familyId !== originalFamilyId) {
-        if (originalFamilyId) await removeEntryFromFamily(originalFamilyId, entryId);
-        await addEntryToFamily(familyId, entryId);
+    const removed = originalFamilyIds.filter((fid) => !familyIds.includes(fid));
+    for (const fid of removed) {
+      await removeEntryFromFamily(fid, entryId);
+    }
+    for (const value of familyIds) {
+      if (originalFamilyIds.includes(value)) continue; // unchanged membership
+      const existingFamily = families.find((f) => f.id === value);
+      if (existingFamily) {
+        await addEntryToFamily(existingFamily.id, entryId);
+      } else if (value.trim()) {
+        await createFamily({ name: value.trim(), description: "", user, entryId });
       }
-    } else if (familyChoice === "new" && newFamilyName.trim()) {
-      if (originalFamilyId) await removeEntryFromFamily(originalFamilyId, entryId);
-      await createFamily({ name: newFamilyName, description: newFamilyDesc, user, entryId });
-    } else if (familyChoice === "none" && originalFamilyId) {
-      await removeEntryFromFamily(originalFamilyId, entryId);
     }
   }
 
@@ -167,9 +250,7 @@ export default function NewEntryPage({ entries, user }) {
 
     try {
       let content = null;
-      if (contentType === "text") {
-        content = { type: "text", body };
-      } else if (contentType === "images") {
+      if (images.length > 0) {
         const uploadedImages = [];
         for (const img of images) {
           if (img.file) {
@@ -183,6 +264,8 @@ export default function NewEntryPage({ entries, user }) {
           }
         }
         content = { type: "images", images: uploadedImages };
+      } else if (preservedTextContent) {
+        content = preservedTextContent;
       }
       for (const path of removedPaths) {
         try { await deleteObject(ref(storage, path)); }
@@ -210,177 +293,212 @@ export default function NewEntryPage({ entries, user }) {
     }
   }
 
-  if (loadingExisting) return <main className="form-page"><p>Loading…</p></main>;
+  if (loadingExisting) {
+    return (
+      <div className="overlay">
+        <div className="overlay-bar">
+          <h1 className="overlay-title">{isEditing ? "Edit Entry" : "New Entry"}</h1>
+          <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
+            Close
+          </button>
+        </div>
+        <p>Loading…</p>
+      </div>
+    );
+  }
 
   return (
-    <main className="form-page">
-      <h1 className="page-title">{isEditing ? "Edit entry" : "New entry"}</h1>
-
+    <div className="overlay">
       <form onSubmit={handleSubmit} className="entry-form">
-        <label className="field">
-          <span>Title</span>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            required
-            maxLength={200}
-          />
-        </label>
-
-        {descriptorFields.map((f) => (
-          <label className="field" key={f.key}>
-            <span>{f.label}</span>
-            <input
-              type="text"
-              value={descriptorValues[f.key] || ""}
-              onChange={(e) => setDescriptorValues((d) => ({ ...d, [f.key]: e.target.value }))}
-            />
-          </label>
-        ))}
-
-        <div className="field">
-          <span>Tags</span>
-          <CreatableSelect
-            options={tagOptions}
-            selected={tags}
-            onChange={setTags}
-            multiple
-            allowCreate
-            placeholder="Search or add tags…"
-          />
-        </div>
-
-        <div className="field">
-          <span>Content</span>
-          <select value={contentType} onChange={(e) => setContentType(e.target.value)}>
-            <option value="none">None</option>
-            <option value="text">Text</option>
-            <option value="images">Image(s)</option>
-          </select>
-        </div>
-
-        {contentType === "text" && (
-          <label className="field">
-            <span>Body</span>
-            <textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              rows={8}
-            />
-          </label>
-        )}
-
-        {contentType === "images" && (
-          <div className="field">
-            {images.length > 0 && (
-              <div className="image-manager">
-                {images.map((img, i) => (
-                  <div
-                    key={img.key}
-                    className={`image-item${i === 0 ? " primary" : ""}`}
-                    draggable
-                    onDragStart={() => handleDragStart(i)}
-                    onDragOver={handleDragOver}
-                    onDrop={() => handleDrop(i)}
-                  >
-                    <img src={img.url} alt="" />
-                    {i === 0 && <span className="primary-tag">Primary</span>}
-                    <button
-                      type="button"
-                      className="image-remove"
-                      onClick={() => removeImage(img.key)}
-                      aria-label="Remove image"
-                    >
-                      &times;
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <input type="file" accept="image/*" multiple onChange={handleFilesChange} />
-            {images.length > 1 && (
-              <p className="field-hint">Drag to reorder — the first image is the cover.</p>
-            )}
-          </div>
-        )}
-
-        <label className="field">
-          <span>Link</span>
-          <input
-            type="url"
-            value={link}
-            onChange={(e) => setLink(e.target.value)}
-            placeholder="https://…"
-          />
-        </label>
-
-        <label className="field">
-          <span>Notes</span>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={8}
-            maxLength={8000}
-          />
-        </label>
-
-        <div className="field">
-          <span>Related entries</span>
-          <CreatableSelect
-            options={relatedOptions}
-            selected={related}
-            onChange={setRelated}
-            multiple
-            allowCreate={false}
-            placeholder="Search entries by title…"
-          />
-        </div>
-
-        <fieldset className="field family-field">
-          <legend>Family</legend>
-          <label className="radio-row">
-            <input type="radio" checked={familyChoice === "none"} onChange={() => setFamilyChoice("none")} /> None
-          </label>
-          {families.map((f) => (
-            <label className="radio-row" key={f.id}>
-              <input
-                type="radio"
-                checked={familyChoice === `existing:${f.id}`}
-                onChange={() => setFamilyChoice(`existing:${f.id}`)}
-              /> {f.name}
-            </label>
-          ))}
-          <label className="radio-row">
-            <input type="radio" checked={familyChoice === "new"} onChange={() => setFamilyChoice("new")} /> New family
-          </label>
-          {familyChoice === "new" && (
-            <div className="family-new-fields">
-              <input
-                placeholder="Name"
-                value={newFamilyName}
-                onChange={(e) => setNewFamilyName(e.target.value)}
-              />
-              <input
-                placeholder="Description"
-                value={newFamilyDesc}
-                onChange={(e) => setNewFamilyDesc(e.target.value)}
-              />
-            </div>
+        <div className="overlay-bar">
+          <h1 className="overlay-title">{isEditing ? "Edit Entry" : "New Entry"}</h1>
+          {descriptorValues.primative && (
+            <button type="submit" className="overlay-submit" disabled={saving || !title.trim()}>
+              {saving ? "Saving…" : "Submit"}
+            </button>
           )}
-        </fieldset>
+          <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
+            Close
+          </button>
+        </div>
 
         {error && <p className="auth-error">{error}</p>}
 
-        <div className="form-actions">
-          <button type="button" className="link-btn" onClick={() => navigate(-1)}>
-            Cancel
-          </button>
-          <button type="submit" className="solid-btn" disabled={saving}>
-            {saving ? "Saving…" : "Commit to archive"}
-          </button>
-        </div>
+        {primativeField && (
+          <div className="field entry-form-full field-primative">
+            <div className="field-label-row">
+              <span>Primative Type</span>
+              <button
+                type="button"
+                className="info-icon-btn"
+                onClick={onInfoClick}
+                aria-label="What is Primative Type?"
+              >
+                i
+              </button>
+            </div>
+            <div className="choice-list">
+              {CHOICE_OPTIONS.primative.map((option) => (
+                <button
+                  type="button"
+                  key={option}
+                  className={descriptorValues.primative === option ? "active" : ""}
+                  onClick={() => setDescriptorValues((d) => ({ ...d, primative: option }))}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {descriptorValues.primative && (
+          <>
+            <div className="entry-form-row">
+              <label className="field">
+                <span>Title</span>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Title"
+                  maxLength={200}
+                  {...NO_AUTOFILL}
+                />
+              </label>
+
+              {fieldRow.map((f) =>
+                CHOICE_OPTIONS[f.key] ? (
+                  <div className="field" key={f.key}>
+                    <span>{f.label}</span>
+                    <div className="choice-list">
+                      {CHOICE_OPTIONS[f.key].map((option) => (
+                        <button
+                          type="button"
+                          key={option}
+                          className={descriptorValues[f.key] === option ? "active" : ""}
+                          onClick={() => setDescriptorValues((d) => ({ ...d, [f.key]: option }))}
+                        >
+                          {option}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <label className="field" key={f.key}>
+                    <span>{f.label}</span>
+                    <input
+                      type="text"
+                      value={descriptorValues[f.key] || ""}
+                      onChange={(e) => setDescriptorValues((d) => ({ ...d, [f.key]: e.target.value }))}
+                      placeholder={FIELD_PLACEHOLDERS[f.key] || f.label}
+                      {...NO_AUTOFILL}
+                    />
+                  </label>
+                )
+              )}
+            </div>
+
+            <label className="field entry-form-full">
+              <span>Description</span>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Description…"
+                rows={4}
+                maxLength={8000}
+                {...NO_AUTOFILL}
+              />
+            </label>
+
+            <div className="field entry-form-full">
+              <span>Tags</span>
+              <CreatableSelect
+                options={tagOptions}
+                selected={tags}
+                onChange={setTags}
+                multiple
+                allowCreate
+                placeholder="Add more"
+              />
+            </div>
+
+            <label className="field entry-form-full">
+              <span>Link</span>
+              <input
+                type="url"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="https://…"
+                {...NO_AUTOFILL}
+              />
+            </label>
+
+            <div className="field entry-form-full">
+              <div className="field-label-row">
+                <span className="asset-upload-label" onClick={() => fileInputRef.current?.click()}>
+                  Upload Assets
+                </span>
+                {images.length > 0 && (
+                  <button type="button" className="link-btn" onClick={clearAllImages}>
+                    Clear All
+                  </button>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={handleFilesChange}
+                hidden
+              />
+              {images.length === 0 ? (
+                <p className="asset-empty">No assets linked</p>
+              ) : (
+                <div className="creatable-chips">
+                  {images.map((img) => (
+                    <span className="chip" key={img.key}>
+                      {imageDisplayName(img)}
+                      <button
+                        type="button"
+                        onClick={() => removeImage(img.key)}
+                        aria-label={`Remove ${imageDisplayName(img)}`}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="field entry-form-full">
+              <span>Related entries</span>
+              <CreatableSelect
+                options={relatedOptions}
+                selected={related}
+                onChange={setRelated}
+                multiple
+                allowCreate={false}
+                placeholder="Search entries by title…"
+              />
+            </div>
+
+            <div className="field entry-form-full">
+              <span>Families</span>
+              <CreatableSelect
+                options={familyOptions}
+                selected={familyIds}
+                onChange={setFamilyIds}
+                multiple
+                allowCreate={false}
+                placeholder="Search families…"
+              />
+            </div>
+          </>
+        )}
       </form>
-    </main>
+    </div>
   );
 }

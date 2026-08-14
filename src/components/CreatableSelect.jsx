@@ -1,5 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 
+// Hints for LastPass/1Password/Bitwarden/Dashlane/Proton Pass to leave
+// this search field alone -- it's not a login, but password managers
+// often misidentify plain text inputs and clutter them with icons.
+const NO_AUTOFILL = {
+  autoComplete: "off",
+  "data-lpignore": "true",
+  "data-1p-ignore": "true",
+  "data-bwignore": "true",
+  "data-protonpass-ignore": "true",
+  "data-form-type": "other",
+};
+
 /**
  * A searchable, optionally-multi-select, optionally-creatable dropdown.
  *
@@ -18,6 +30,7 @@ export default function CreatableSelect({
   allowCreate = false,
   placeholder = "Search…",
   renderLabel = (value, label) => label,
+  dropUp = false,
 }) {
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
@@ -61,38 +74,36 @@ export default function CreatableSelect({
 
   return (
     <div className="creatable" ref={wrapRef}>
-      {selected.length > 0 && (
-        <div className="creatable-chips">
-          {selected.map((v, i) => (
-            <span className="chip" key={v}>
-              {renderLabel(v, selectedLabels[i])}
-              <button type="button" onClick={() => remove(v)} aria-label={`Remove ${selectedLabels[i]}`}>
-                &times;
-              </button>
-            </span>
-          ))}
-        </div>
-      )}
+      <div className="creatable-chips">
+        {selected.map((v, i) => (
+          <span className="chip" key={v}>
+            {renderLabel(v, selectedLabels[i])}
+            <button type="button" onClick={() => remove(v)} aria-label={`Remove ${selectedLabels[i]}`}>
+              &times;
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={query}
+          placeholder={placeholder}
+          onFocus={() => setOpen(true)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && showCreate) {
+              e.preventDefault();
+              choose(query.trim());
+            }
+          }}
+          {...NO_AUTOFILL}
+        />
+      </div>
 
-      <input
-        type="text"
-        value={query}
-        placeholder={placeholder}
-        onFocus={() => setOpen(true)}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setOpen(true);
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && showCreate) {
-            e.preventDefault();
-            choose(query.trim());
-          }
-        }}
-      />
-
-      {open && (filtered.length > 0 || showCreate) && (
-        <div className="creatable-menu">
+      {open && q.length > 0 && (filtered.length > 0 || showCreate) && (
+        <div className={dropUp ? "creatable-menu creatable-menu-up" : "creatable-menu"}>
           {filtered.map((o) => (
             <button
               type="button"

@@ -1,5 +1,5 @@
 import {
-  addDoc, arrayRemove, arrayUnion, collection, doc, onSnapshot, orderBy, query,
+  addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, onSnapshot, orderBy, query,
   serverTimestamp, updateDoc,
 } from "firebase/firestore";
 import { db } from "../firebase.js";
@@ -15,14 +15,26 @@ export function subscribeFamilies(onChange, onError) {
   );
 }
 
-export async function createFamily({ name, description, user, entryId }) {
+export async function createFamily({ name, description, user, entryId, entryIds }) {
   return addDoc(collection(db, COLLECTION), {
     name: name.trim(),
     description: description?.trim() || "",
     postedBy: { uid: user.uid, name: user.displayName || user.email, email: user.email },
-    entryIds: entryId ? [entryId] : [],
+    entryIds: entryIds?.length > 0 ? entryIds : entryId ? [entryId] : [],
     createdAt: serverTimestamp(),
   });
+}
+
+export async function updateFamily(familyId, { name, description, entryIds }) {
+  await updateDoc(doc(db, COLLECTION, familyId), {
+    name: name.trim(),
+    description: description?.trim() || "",
+    entryIds: entryIds || [],
+  });
+}
+
+export async function deleteFamily(familyId) {
+  await deleteDoc(doc(db, COLLECTION, familyId));
 }
 
 export async function addEntryToFamily(familyId, entryId) {

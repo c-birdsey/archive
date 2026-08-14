@@ -15,21 +15,35 @@ A shared reference/moodboard catalog for two people (Calder + Thomas). React (Vi
 1. **Passcode lobby** (`PasscodeGate.jsx`) — a shared password gate before sign-in. This is explicitly a **soft deterrent, not real security** — it ships in the JS bundle, readable by anyone who opens dev tools. Don't "fix" this by trying to hide it harder; that's not the point of it.
 2. **Google sign-in + allowlist** — the real access control. `ALLOWED_EMAILS` in `firebase-config.js` is just for app-side messaging (clear rejection message). The actual enforcement is in Firestore/Storage security rules (documented in README.md), which hardcode the same email list. **If you add/remove an allowed person, update both the rules (Firebase Console) and `ALLOWED_EMAILS` — they must stay in sync.**
 
-## Data model — `entries` collection
+## Data model — schema-v2
+
+This replaced an earlier `type`/`author`/`images` shape; don't assume any code or docs describing that old shape are still accurate.
+
+### `entries` collection
 
 Each doc:
 - `title` (string, required)
-- `author` — `{ uid, name, email }`, auto-set from Google account at creation, **never editable**
-- `type` — single string, via searchable/creatable dropdown (`CreatableSelect.jsx`)
-- `tags` — string array, same dropdown pattern, multi-select
-- `images` — array of `{ url, path }`, **ordered, first = primary/cover**. Uploaded via drag-to-reorder UI in `NewEntryPage.jsx`.
-- `imageUrl` / `imageStoragePath` — **mirrored to `images[0]`** on every save, purely for backward compatibility with entries created before multi-image support and any code that reads the old singular fields. Don't remove this mirroring without checking every read site.
+- `postedBy` — `{ uid, name, email }`, auto-set from the signed-in Google account at creation, **never editable**. This is "who submitted the entry," not necessarily the content's actual creator.
+- `descriptors` — a freeform `key → string` object. The set of available keys is **data, not code**: stored in a single Firestore config doc (`config/descriptorFields`, shape `{ fields: [{key,label}] }`), seeded/merged on every allowed sign-in via `ensureDescriptorFieldsSeeded()` (`src/data/descriptorFields.js`), and extendable at runtime with `addDescriptorField(key, label)` — no deploy needed. Current default keys: `primative` (Physical / Representational / Discursive — the one descriptor rendered as a radio group instead of free text, in `NewEntryPage.jsx`), `author`, `collaborator`, `year`, `medium`, `project`, `location`, `status`, `source`, `country`. Only non-empty values are persisted (`cleanDescriptors()` in `src/data/entries.js`).
+- `tags` — string array, via `CreatableSelect.jsx` (multi-select, allow-create)
+- `content` — polymorphic, one of:
+  - `null` (no content)
+  - `{ type: "text", body }`
+  - `{ type: "images", images: [{ url, path }, ...] }` — **ordered, `images[0]` = primary/cover**, drag-to-reorder in `NewEntryPage.jsx`. No top-level `images`/`imageUrl`/`imageStoragePath` fields exist — everything image-related lives under `content`.
 - `link` — optional URL
 - `notes` — long-form text
-- `relatedIds` — array of other entries' Firestore doc IDs (not titles — titles can change, IDs can't). Resolved to titles at render time in `EntryDetailPage.jsx`. **One-directional as entered** — linking A→B does not auto-link B→A.
+- `relatedIds` — array of other entries' Firestore doc IDs (not titles — titles can change, IDs can't). **One-directional as entered** (linking A→B does not write anything to B), but resolved bidirectionally for *display* — `getRelatedEntries()` in `src/data/entries.js` shows an entry's related list as its own `relatedIds` plus any entry that points back at it.
 - `createdAt` / `updatedAt` — server timestamps
 
-Anyone signed in can edit or delete any entry (not just the original author) — this was a deliberate choice for a small trusted group, not an oversight.
+Anyone signed in can edit or delete any entry (not just the original poster) — this was a deliberate choice for a small trusted group, not an oversight.
+
+### `families` collection
+
+A real, separate top-level collection — **not** derived from `relatedIds` or tags. Each doc: `{ name, description, postedBy, entryIds: [...], createdAt }`. Membership lives only on the family doc (`entryIds`, via `arrayUnion`/`arrayRemove` in `src/data/families.js`) — there's no back-reference on the entry. The data model allows an entry to belong to multiple families; the New Entry form's radio-button UI currently only surfaces/edits one membership at a time.
+
+### Filtering & search
+
+`src/data/filters.js` holds the shared filter/search helpers: `matchesFilter(entry, key, value)` (handles both `descriptors.*` keys and the special `"tag"` key), `filterLabelFor(key, descriptorFields)`, and `entrySearchText()`/`familySearchText()` for the search overlay. Filters are carried as a `?d=key:value` query param on `/` (`IndexPage.jsx`) — both the Index page's own Filters panel and links from `EntryDetailPage.jsx`'s descriptor/tag values write to this same param, so there's one filtering mechanism, not several.
 
 ## Design direction — read before touching any styling
 
@@ -37,8 +51,8 @@ The aesthetic is deliberately modeled on **Studio Lin's website** (studiolin.org
 
 **Explicit prior decisions, don't relitigate without asking:**
 - No comma separators between nav items anywhere (tried, then explicitly reversed — just use flex `gap`, not commas).
-- Action labels are Title Case: "New Entry", "Sign Out" (not "New entry"/"Sign out").
-- Nav layout: Index/About on the left, New Entry/Sign Out on the right, as two separate groups.
+- Action labels are Title Case: "Sign Out" (not "Sign out"). Nav labels themselves (`+Add`, `Info`) are an intentional exception, matching the reference mockups.
+- Nav layout: `Index`/`Families`/`Search` on the left, `+Add`/`Info`/`Sign Out` on the right, as two separate groups. Sign Out is a persistent nav item, not tucked into the About/Info page.
 - No fake/decorative status indicators — a "synced" label was removed because it was hardcoded and meaningless. Don't add UI chrome that doesn't reflect real state.
 - Text-only tiles in the Images grid (entries without an image) get a full faint black outline (`rgba(0,0,0,0.15)`) so they hold their shape in the grid — not just a bottom border.
 
