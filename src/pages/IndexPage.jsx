@@ -5,7 +5,7 @@ import CreatableSelect from "../components/CreatableSelect.jsx";
 import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { matchesFilters, filterLabelFor } from "../data/filters.js";
 
-const FILTER_COLUMN_KEYS = ["primative", "author", "year", "country"];
+const FILTER_COLUMN_KEYS = ["primative", "author", "year"];
 
 function parseFilterParam(raw) {
   const sep = raw.indexOf(":");

@@ -131,13 +131,11 @@ export default function EntryDetailPage({ entries, user }) {
         </div>
 
         {/* 2. Name + description */}
-        <p className="detail-heading">
-          {entry.title}
-          {entry.notes && <span className="detail-heading-desc"> | {entry.notes}</span>}
-        </p>
+        <p className="detail-heading">{entry.title}</p>
+        {entry.notes && <p className="detail-heading-desc">{entry.notes}</p>}
 
         {/* 3. Metadata */}
-        {descriptorEntries.length > 0 && (
+        {(descriptorEntries.length > 0 || entry.link) && (
           <dl className="entry-detail-descriptors">
             {descriptorEntries.map(([key, value]) => (
               <div key={key}>
@@ -153,13 +151,15 @@ export default function EntryDetailPage({ entries, user }) {
                 </dd>
               </div>
             ))}
+            {entry.link && (
+              <div>
+                <dt>Link</dt>
+                <dd>
+                  <a href={entry.link} target="_blank" rel="noopener noreferrer">{linkLabel(entry.link)}</a>
+                </dd>
+              </div>
+            )}
           </dl>
-        )}
-
-        {entry.link && (
-          <a className="view-url" href={entry.link} target="_blank" rel="noopener noreferrer">
-            {linkLabel(entry.link)}
-          </a>
         )}
 
         {/* 4. Connections: tags, related entries, families */}
