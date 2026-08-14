@@ -4,7 +4,6 @@ import { auth } from "../firebase.js";
 
 export default function TopNav({
   signedOut = false,
-  denied = false,
   onSignInClick,
   onSearchClick,
   onInfoClick,
@@ -24,11 +23,7 @@ export default function TopNav({
         <NavLink to="/" className="wordmark" end>
           Register
         </NavLink>
-        <button
-          type="button"
-          className={denied ? "topbar-signin denied" : "topbar-signin"}
-          onClick={onSignInClick}
-        >
+        <button type="button" className="topbar-signin" onClick={onSignInClick}>
           Sign In
         </button>
       </header>

@@ -74,22 +74,24 @@ export default function App() {
   if (isMobile) return <MobileBlock />;
   if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
 
-  if (!isAllowed) {
-    const notice = user ? (
-      <>
-        {user.email} isn't on the archive's access list.{" "}
-        <button type="button" className="link-btn" onClick={() => signOut(auth)}>
-          Try a different account
-        </button>
-      </>
-    ) : (
-      authError || null
-    );
-
+  if (user && !isAllowed) {
     return (
       <div className="page">
-        <TopNav signedOut denied={Boolean(user)} onSignInClick={handleSignIn} />
-        <LandingPage notice={notice} />
+        <p className="access-denied-notice">
+          {user.email} isn't on the archive's access list.{" "}
+          <button type="button" className="link-btn" onClick={() => signOut(auth)}>
+            Please use a different account.
+          </button>
+        </p>
+      </div>
+    );
+  }
+
+  if (!isAllowed) {
+    return (
+      <div className="page">
+        <TopNav signedOut onSignInClick={handleSignIn} />
+        <LandingPage notice={authError || null} />
       </div>
     );
   }
