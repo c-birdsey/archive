@@ -22,6 +22,13 @@ const CHOICE_OPTIONS = {
   status: ["Built", "Unbuilt", "Demolished", "In Progress"],
 };
 
+// Medium is the one choice field where a Representational entry can be
+// more than one thing at once (e.g. a Drawing that's also a Photograph) --
+// every other choice field stays single-select. Stored as a string array
+// on descriptors.medium, the one exception to descriptors otherwise being
+// key -> string (see cleanDescriptors in data/entries.js).
+const MULTI_CHOICE_KEYS = new Set(["medium"]);
+
 const FIELD_PLACEHOLDERS = {
   author: "Name",
   year: "YYYY",
@@ -46,8 +53,10 @@ const NO_AUTOFILL = {
 // Only the fields relevant to the selected primative show, in order:
 // Author/Year always lead, then the primative-specific field (Medium for
 // Representational, Location for Physical, Source for Discursive), then
-// Project, then Status (Physical only), then Collaborator, then Source
-// again (unless it was already used above as the primative field).
+// Project, then Status (Physical only), then Collaborator. Source only
+// appears for Discursive entries, where it's the primative-specific field
+// above -- Physical/Representational entries don't get a Source field at
+// all.
 function buildFieldRow(primative, descriptorFields) {
   const byKey = Object.fromEntries(descriptorFields.map((f) => [f.key, f]));
   const used = new Set(["primative"]);
@@ -69,10 +78,14 @@ function buildFieldRow(primative, descriptorFields) {
   add("project");
   if (primative === "Physical") add("status");
   add("collaborator");
-  if (primative !== "Discursive") add("source");
 
   return row;
 }
+
+// Author/Project get the same live search-and-create dropdown as Tags
+// (CreatableSelect), prepopulated with values already used across other
+// entries, instead of a plain text input.
+const AUTOCOMPLETE_KEYS = new Set(["author", "project"]);
 
 export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const { id } = useParams(); // present when editing
@@ -171,7 +184,13 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
       setLink(data.link || "");
       setTags(data.tags || []);
       setRelated(data.relatedIds || []);
-      setDescriptorValues(data.descriptors || {});
+      const descriptors = { ...(data.descriptors || {}) };
+      // Older entries stored a single medium string -- wrap it so the
+      // multi-select choice list above reads it correctly.
+      if (descriptors.medium && !Array.isArray(descriptors.medium)) {
+        descriptors.medium = [descriptors.medium];
+      }
+      setDescriptorValues(descriptors);
 
       if (data.content?.type === "text") {
         setPreservedTextContent(data.content);
@@ -239,6 +258,15 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
     () => buildFieldRow(descriptorValues.primative, descriptorFields),
     [descriptorValues.primative, descriptorFields]
   );
+
+  const descriptorOptions = useMemo(() => {
+    const map = {};
+    for (const key of AUTOCOMPLETE_KEYS) {
+      const set = new Set(entries.map((e) => e.descriptors?.[key]).filter(Boolean));
+      map[key] = [...set].sort().map((v) => ({ value: v, label: v }));
+    }
+    return map;
+  }, [entries]);
 
   function handleFilesChange(e) {
     const files = Array.from(e.target.files || []);
@@ -439,17 +467,42 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
                   <div className="field" key={f.key}>
                     <span>{f.label}</span>
                     <div className="choice-list">
-                      {CHOICE_OPTIONS[f.key].map((option) => (
-                        <button
-                          type="button"
-                          key={option}
-                          className={descriptorValues[f.key] === option ? "active" : ""}
-                          onClick={() => setDescriptorValues((d) => ({ ...d, [f.key]: option }))}
-                        >
-                          {option}
-                        </button>
-                      ))}
+                      {CHOICE_OPTIONS[f.key].map((option) => {
+                        const isMulti = MULTI_CHOICE_KEYS.has(f.key);
+                        const current = descriptorValues[f.key];
+                        const active = isMulti
+                          ? Array.isArray(current) && current.includes(option)
+                          : current === option;
+                        return (
+                          <button
+                            type="button"
+                            key={option}
+                            className={active ? "active" : ""}
+                            onClick={() => setDescriptorValues((d) => {
+                              if (!isMulti) return { ...d, [f.key]: option };
+                              const arr = Array.isArray(d[f.key]) ? d[f.key] : [];
+                              const next = arr.includes(option)
+                                ? arr.filter((o) => o !== option)
+                                : [...arr, option];
+                              return { ...d, [f.key]: next };
+                            })}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
                     </div>
+                  </div>
+                ) : AUTOCOMPLETE_KEYS.has(f.key) ? (
+                  <div className="field" key={f.key}>
+                    <span>{f.label}</span>
+                    <CreatableSelect
+                      options={descriptorOptions[f.key] || []}
+                      selected={descriptorValues[f.key] ? [descriptorValues[f.key]] : []}
+                      onChange={(vals) => setDescriptorValues((d) => ({ ...d, [f.key]: vals[0] || "" }))}
+                      allowCreate
+                      placeholder={FIELD_PLACEHOLDERS[f.key] || f.label}
+                    />
                   </div>
                 ) : (
                   <label className="field" key={f.key}>
@@ -496,7 +549,7 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
                 type="url"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                placeholder="https://…"
+                placeholder="URL"
                 {...NO_AUTOFILL}
               />
             </label>

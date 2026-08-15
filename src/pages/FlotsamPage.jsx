@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import ScrollRevealTile from "../components/ScrollRevealTile.jsx";
 
 // Lightweight, uncategorized images -- no descriptors, no filters, just
 // a title and tags. Deliberately smaller/denser (4 columns vs. the Index
@@ -19,8 +20,7 @@ export default function FlotsamPage({ flotsam }) {
       ) : (
         <main className="flotsam-grid">
           {flotsam.map((item) => (
-            <button
-              type="button"
+            <ScrollRevealTile
               key={item.id}
               className="image-tile"
               onClick={() => navigate(`/flotsam/${item.id}`)}
@@ -32,7 +32,7 @@ export default function FlotsamPage({ flotsam }) {
               {item.tags && item.tags.length > 0 && (
                 <p className="flotsam-tile-tags">{item.tags.join(", ")}</p>
               )}
-            </button>
+            </ScrollRevealTile>
           ))}
         </main>
       )}

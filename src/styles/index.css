@@ -466,6 +466,23 @@ a{ color:inherit; }
   text-align:center;
   width:100%;
 }
+/* Scroll-triggered fade-in, shared by the Index images grid and the
+   Fragments grid (both use ScrollRevealTile, which toggles .is-visible
+   via IntersectionObserver -- see components/ScrollRevealTile.jsx).
+   Scoped to these two grids rather than applied to .image-tile globally,
+   since nothing else using that class adds .is-visible. */
+.images-grid .image-tile,
+.flotsam-grid .image-tile{
+  opacity:0;
+  transform:translateY(24px);
+  transition:opacity 0.6s ease, transform 0.6s ease;
+}
+.images-grid .image-tile.is-visible,
+.flotsam-grid .image-tile.is-visible{ opacity:1; transform:translateY(0); }
+@media (prefers-reduced-motion: reduce){
+  .images-grid .image-tile,
+  .flotsam-grid .image-tile{ opacity:1; transform:none; transition:none; }
+}
 .image-frame{
   aspect-ratio:8 / 5;
   display:flex;
@@ -576,8 +593,9 @@ a{ color:inherit; }
 
 /* New Entry sits on the same 8-column grid as the nav: the Primative and
    Family fieldsets each take the full width (their own content just hugs
-   the left edge), while .entry-form-row lays its fields out one per
-   column so Title/Author/Year/etc each get a dedicated column. */
+   the left edge), while .entry-form-row lays out Title/Author/Year/etc as
+   auto-sizing columns that wrap onto additional lines once they no longer
+   fit, rather than being squeezed into ever-narrower fixed columns. */
 .entry-form{
   display:grid;
   grid-template-columns:repeat(8, 1fr);
@@ -589,8 +607,9 @@ a{ color:inherit; }
 .entry-form-row{
   grid-column:1 / 9;
   display:grid;
-  grid-template-columns:repeat(8, 1fr);
+  grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));
   column-gap:24px;
+  row-gap:20px;
   margin-bottom:28px;
 }
 .entry-form-row .field{ margin-bottom:0; }

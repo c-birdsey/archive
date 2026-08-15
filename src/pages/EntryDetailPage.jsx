@@ -64,7 +64,21 @@ export default function EntryDetailPage({ entries, user }) {
   );
 
   const descriptorLabel = (key) => descriptorFields.find((f) => f.key === key)?.label || key;
-  const descriptorEntries = Object.entries(entry?.descriptors || {});
+  // Publication/Source is only still editable (in the New Entry form) for
+  // Discursive entries -- written works, where it's typically a URL to the
+  // source text. Physical/Representational entries no longer collect it,
+  // so don't surface it here even if an older entry still carries a value.
+  // Firestore doesn't guarantee map-field key order is stable across reads,
+  // so this list would otherwise visibly reshuffle on every load/refresh --
+  // sort by the descriptor config's own order (config/descriptorFields)
+  // instead of trusting insertion order from the document.
+  const descriptorOrder = useMemo(
+    () => new Map(descriptorFields.map((f, i) => [f.key, i])),
+    [descriptorFields]
+  );
+  const descriptorEntries = Object.entries(entry?.descriptors || {})
+    .filter(([key]) => key !== "source" || entry?.descriptors?.primative === "Discursive")
+    .sort((a, b) => (descriptorOrder.get(a[0]) ?? Infinity) - (descriptorOrder.get(b[0]) ?? Infinity));
   const images = entry?.content?.type === "images" ? entry.content.images || [] : [];
   // PDFs live in the same array as pictures but open in a new tab instead
   // of the lightbox, so the lightbox only ever cycles through the actual
@@ -150,7 +164,9 @@ export default function EntryDetailPage({ entries, user }) {
               <div key={key}>
                 <dt>{descriptorLabel(key)}</dt>
                 <dd>
-                  {key === "source" ? (
+                  {Array.isArray(value) ? (
+                    value.join(", ")
+                  ) : key === "source" ? (
                     <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
                   ) : FILTERABLE_DESCRIPTOR_KEYS.has(key) ? (
                     <Link to={`/index?d=${encodeURIComponent(key)}:${encodeURIComponent(value)}`}>{value}</Link>

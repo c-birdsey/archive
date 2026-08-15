@@ -17,9 +17,17 @@ export function subscribeEntries(onChange, onError) {
 
 // Only keys with a non-empty value are stored — descriptors are meant to
 // be absent, not present-and-blank, when not applicable to an entry.
+// Descriptors are normally key -> string; medium is the one exception,
+// key -> string[], so a Representational entry can be more than one
+// medium at once (see MULTI_CHOICE_KEYS in NewEntryPage.jsx).
 function cleanDescriptors(descriptors) {
   const out = {};
   for (const [key, value] of Object.entries(descriptors || {})) {
+    if (Array.isArray(value)) {
+      const cleaned = value.map((v) => String(v ?? "").trim()).filter(Boolean);
+      if (cleaned.length > 0) out[key] = cleaned;
+      continue;
+    }
     const trimmed = String(value ?? "").trim();
     if (trimmed) out[key] = trimmed;
   }

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { storage } from "../firebase.js";
+import { db, storage } from "../firebase.js";
 import {
   DEFAULT_DESCRIPTOR_FIELDS, addDescriptorField, ensureDescriptorFieldsSeeded,
   subscribeDescriptorFields,
@@ -96,6 +97,33 @@ export default function DebugPage({ user }) {
       setFamilyChoice("none"); setNewFamilyName(""); setNewFamilyDesc("");
     } catch (err) {
       setStatus(`Save failed: ${err.message}`);
+    }
+  }
+
+  // One-off migration: Physical/Representational entries whose
+  // descriptors.source was used as a link before the field was dropped
+  // from the New Entry form -- copy it into the real `link` field when
+  // that's empty, so the URL isn't stranded on a descriptor that's no
+  // longer shown anywhere.
+  const backfillCandidates = useMemo(() => entries.filter((e) => {
+    const source = e.descriptors?.source?.trim();
+    const primative = e.descriptors?.primative;
+    return source && !e.link?.trim() && (primative === "Physical" || primative === "Representational");
+  }), [entries]);
+
+  async function handleBackfillLinkFromSource() {
+    if (backfillCandidates.length === 0) return;
+    setStatus(`Backfilling ${backfillCandidates.length} entr${backfillCandidates.length === 1 ? "y" : "ies"}…`);
+    try {
+      for (const e of backfillCandidates) {
+        await updateDoc(doc(db, "entries", e.id), {
+          link: e.descriptors.source.trim(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+      setStatus(`Backfilled link from Publication/Source on: ${backfillCandidates.map((e) => e.title).join(", ")}.`);
+    } catch (err) {
+      setStatus(`Backfill failed: ${err.message}`);
     }
   }
 
@@ -240,6 +268,22 @@ export default function DebugPage({ user }) {
             <strong>{f.name}</strong> — entries: {f.entryIds?.map((id) => entries.find((e) => e.id === id)?.title || id).join(", ") || "—"}
           </div>
         ))}
+      </section>
+
+      <section style={{ marginBottom: 32, border: "1px solid #ccc", padding: 12 }}>
+        <h2>Backfill link from Publication/Source ({backfillCandidates.length})</h2>
+        {backfillCandidates.length === 0 ? (
+          <p style={{ fontSize: 12, color: "#666" }}>Nothing to backfill.</p>
+        ) : (
+          <ul>
+            {backfillCandidates.map((e) => (
+              <li key={e.id}>{e.title} — {e.descriptors.source}</li>
+            ))}
+          </ul>
+        )}
+        <button onClick={handleBackfillLinkFromSource} type="button" disabled={backfillCandidates.length === 0}>
+          Backfill {backfillCandidates.length} entr{backfillCandidates.length === 1 ? "y" : "ies"}
+        </button>
       </section>
 
       <section style={{ border: "1px solid #900", padding: 12 }}>

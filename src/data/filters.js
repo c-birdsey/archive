@@ -6,7 +6,11 @@ export function matchesFilter(entry, key, value) {
   if (key === "tag") {
     return (entry.tags || []).some((t) => t.toLowerCase() === v);
   }
-  return (entry.descriptors?.[key] || "").toLowerCase() === v;
+  const stored = entry.descriptors?.[key];
+  if (Array.isArray(stored)) {
+    return stored.some((s) => s.toLowerCase() === v);
+  }
+  return (stored || "").toLowerCase() === v;
 }
 
 // Multiple filters can be active at once (repeated ?d=key:value params).

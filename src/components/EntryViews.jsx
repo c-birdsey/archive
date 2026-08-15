@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import LetterGroupedList from "./LetterGroupedList.jsx";
+import ScrollRevealTile from "./ScrollRevealTile.jsx";
 import { isPdf } from "../data/entries.js";
 import { youtubeThumbnail } from "../data/youtube.js";
 
@@ -49,28 +50,33 @@ export function ImagesView({ entries, onOpen }) {
         const coverUrl = cover
           ? (isPdf(cover) ? cover.thumbUrl || null : cover.url)
           : youtubeThumbnail(entry.link);
-        return (
-          <button
-            type="button"
-            key={entry.id}
-            className={`image-tile${coverUrl ? "" : " no-image"}`}
-            onClick={() => onOpen(entry.id)}
-          >
-            {coverUrl ? (
-              <div className="image-frame">
-                <img src={coverUrl} alt="" loading="lazy" />
-              </div>
-            ) : (
-              <div className="no-image-inner">
-                <p>{entry.title}</p>
-              </div>
-            )}
-            <p className="tile-title">{entry.title}</p>
-            <p className="tile-meta">{entry.descriptors?.year || ""}</p>
-          </button>
-        );
+        return <ImageTile key={entry.id} entry={entry} coverUrl={coverUrl} onOpen={onOpen} />;
       })}
     </main>
+  );
+}
+
+// Entries are already all loaded client-side (see the README's "load
+// everything, filter in memory" design), so ScrollRevealTile's fade-in is
+// a scroll-triggered reveal, not paginated fetching.
+function ImageTile({ entry, coverUrl, onOpen }) {
+  return (
+    <ScrollRevealTile
+      className={`image-tile${coverUrl ? "" : " no-image"}`}
+      onClick={() => onOpen(entry.id)}
+    >
+      {coverUrl ? (
+        <div className="image-frame">
+          <img src={coverUrl} alt="" loading="lazy" />
+        </div>
+      ) : (
+        <div className="no-image-inner">
+          <p>{entry.title}</p>
+        </div>
+      )}
+      <p className="tile-title">{entry.title}</p>
+      <p className="tile-meta">{entry.descriptors?.year || ""}</p>
+    </ScrollRevealTile>
   );
 }
 
