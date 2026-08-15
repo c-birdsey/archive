@@ -87,6 +87,14 @@ a{ color:inherit; }
   color:var(--ink);
   min-height:100vh;
 }
+/* Search/Info/Families are the normal light .overlay (translucent
+   white), regardless of the black page underneath -- without this they
+   inherit the inverted --ink and end up white-on-near-white. */
+.page-flotsam .overlay{
+  --ink:#111;
+  --bg:#fff;
+  color:var(--ink);
+}
 
 .wordmark{
   flex-shrink:0;
