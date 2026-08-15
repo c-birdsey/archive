@@ -24,6 +24,7 @@ export const firebaseConfig = {
 export const ALLOWED_EMAILS = [
     "calder.birdsey@gmail.com",
     "cctommychen@gmail.com",
+    "cochrane.alicem@gmail.com",
 ];
 
 // Lobby passcode. This is a soft deterrent, NOT real security — anyone
