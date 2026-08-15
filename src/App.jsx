@@ -1,14 +1,13 @@
 import { useEffect, useState } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { signInWithPopup, signOut } from "firebase/auth";
 import { useAuth } from "./hooks/useAuth.js";
 import { useEntries } from "./hooks/useEntries.js";
 import { useFamilies } from "./hooks/useFamilies.js";
+import { useFlotsam } from "./hooks/useFlotsam.js";
 import { auth, googleProvider } from "./firebase.js";
 import { ALLOWED_EMAILS } from "./firebase-config.js";
 import { ensureDescriptorFieldsSeeded } from "./data/descriptorFields.js";
-import PasscodeGate, { isLobbyUnlocked } from "./pages/PasscodeGate.jsx";
-import MobileBlock from "./pages/MobileBlock.jsx";
 import TopNav from "./components/TopNav.jsx";
 import SearchOverlay from "./components/SearchOverlay.jsx";
 import InfoOverlay from "./components/InfoOverlay.jsx";
@@ -20,13 +19,15 @@ import FamilyDetailPage from "./pages/FamilyDetailPage.jsx";
 import NewEntryPage from "./pages/NewEntryPage.jsx";
 import NewFamilyPage from "./pages/NewFamilyPage.jsx";
 import EntryDetailPage from "./pages/EntryDetailPage.jsx";
+import FlotsamPage from "./pages/FlotsamPage.jsx";
+import FlotsamDetailPage from "./pages/FlotsamDetailPage.jsx";
+import NewFlotsamPage from "./pages/NewFlotsamPage.jsx";
 import DebugPage from "./pages/DebugPage.jsx";
 
 const MOBILE_BREAKPOINT = 900;
 
 export default function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth < MOBILE_BREAKPOINT);
-  const [unlocked, setUnlocked] = useState(isLobbyUnlocked());
   const [overlay, setOverlay] = useState(null); // null | "search" | "info" | "families"
   const [authError, setAuthError] = useState("");
   const user = useAuth();
@@ -57,6 +58,7 @@ export default function App() {
   const isAllowed = Boolean(user && ALLOWED_EMAILS.includes(user.email));
   const { entries } = useEntries(isAllowed);
   const families = useFamilies(isAllowed);
+  const flotsam = useFlotsam(isAllowed);
 
   useEffect(() => {
     if (isAllowed) ensureDescriptorFieldsSeeded();
@@ -70,9 +72,6 @@ export default function App() {
       setAuthError(describeAuthError(err));
     }
   }
-
-  if (isMobile) return <MobileBlock />;
-  if (!unlocked) return <PasscodeGate onUnlock={() => setUnlocked(true)} />;
 
   if (user && !isAllowed) {
     return (
@@ -96,9 +95,16 @@ export default function App() {
     );
   }
 
+  // Only the grid (/flotsam) and a single item (/flotsam/:id) invert --
+  // the New/Edit form stays on the normal light theme like every other
+  // overlay form, since the semi-transparent .overlay background assumes
+  // a light page underneath it.
+  const isFlotsam = /^\/flotsam(\/[^/]+)?$/.test(location.pathname) && location.pathname !== "/flotsam/new";
+
   return (
-    <div className="page">
+    <div className={isFlotsam ? "page page-flotsam" : "page"}>
       <TopNav
+        mobile={isMobile}
         onSearchClick={() => setOverlay("search")}
         onInfoClick={() => setOverlay("info")}
         infoActive={overlay === "info"}
@@ -110,17 +116,30 @@ export default function App() {
           path="/"
           element={<LandingPage showExploreLinks onFamiliesClick={() => setOverlay("families")} />}
         />
-        <Route path="/index" element={<IndexPage entries={entries} />} />
-        <Route
-          path="/family/:id"
-          element={<FamilyDetailPage entries={entries} onFamiliesClick={() => setOverlay("families")} />}
-        />
-        <Route path="/new" element={<NewEntryPage entries={entries} user={user} onInfoClick={() => setOverlay("info")} infoOpen={overlay === "info"} />} />
-        <Route path="/new-family" element={<NewFamilyPage entries={entries} user={user} />} />
-        <Route path="/family/:id/edit" element={<NewFamilyPage entries={entries} user={user} />} />
-        <Route path="/entry/:id" element={<EntryDetailPage entries={entries} user={user} />} />
-        <Route path="/entry/:id/edit" element={<NewEntryPage entries={entries} user={user} onInfoClick={() => setOverlay("info")} infoOpen={overlay === "info"} />} />
-        <Route path="/__debug" element={<DebugPage user={user} />} />
+        <Route path="/flotsam" element={<FlotsamPage flotsam={flotsam} />} />
+        <Route path="/flotsam/new" element={<NewFlotsamPage entries={entries} flotsam={flotsam} user={user} mobile={isMobile} />} />
+        <Route path="/flotsam/:id" element={<FlotsamDetailPage flotsam={flotsam} />} />
+        <Route path="/flotsam/:id/edit" element={<NewFlotsamPage entries={entries} flotsam={flotsam} user={user} mobile={isMobile} />} />
+        {/* Everything below is desktop-only -- on mobile, the whole
+            archive (Index/Families/Entries) is off-limits and any of
+            these paths just bounce back to Fragments. */}
+        {isMobile ? (
+          <Route path="*" element={<Navigate to="/flotsam" replace />} />
+        ) : (
+          <>
+            <Route path="/index" element={<IndexPage entries={entries} />} />
+            <Route
+              path="/family/:id"
+              element={<FamilyDetailPage entries={entries} onFamiliesClick={() => setOverlay("families")} />}
+            />
+            <Route path="/new" element={<NewEntryPage entries={entries} user={user} onInfoClick={() => setOverlay("info")} infoOpen={overlay === "info"} />} />
+            <Route path="/new-family" element={<NewFamilyPage entries={entries} user={user} />} />
+            <Route path="/family/:id/edit" element={<NewFamilyPage entries={entries} user={user} />} />
+            <Route path="/entry/:id" element={<EntryDetailPage entries={entries} user={user} />} />
+            <Route path="/entry/:id/edit" element={<NewEntryPage entries={entries} user={user} onInfoClick={() => setOverlay("info")} infoOpen={overlay === "info"} />} />
+            <Route path="/__debug" element={<DebugPage user={user} />} />
+          </>
+        )}
       </Routes>
       <SearchOverlay
         open={overlay === "search"}

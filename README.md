@@ -80,6 +80,10 @@ service cloud.firestore {
       allow read, write: if isAllowed();
     }
 
+    match /flotsam/{flotsamId} {
+      allow read, write: if isAllowed();
+    }
+
     match /config/{docId} {
       allow read, write: if isAllowed();
     }
@@ -101,6 +105,9 @@ service firebase.storage {
         ];
     }
     match /entries/{allPaths=**} {
+      allow read, write: if isAllowed();
+    }
+    match /flotsam/{allPaths=**} {
       allow read, write: if isAllowed();
     }
   }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { db, storage } from "../firebase.js";
@@ -8,9 +8,11 @@ import { createEntry, updateEntry, assetName, isPdf } from "../data/entries.js";
 import {
   createFamily, addEntryToFamily, removeEntryFromFamily, getFamiliesForEntry,
 } from "../data/families.js";
+import { deleteFlotsamRecord } from "../data/flotsam.js";
 import { renderPdfFirstPage } from "../data/pdfThumbnail.js";
 import { useDescriptorFields } from "../hooks/useDescriptorFields.js";
 import { useFamilies } from "../hooks/useFamilies.js";
+import { useGuardedClose } from "../hooks/useGuardedClose.js";
 
 // Fixed-option fields render as a plain clickable list (like the Filters
 // panel) instead of a free-text input.
@@ -76,6 +78,8 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const { id } = useParams(); // present when editing
   const navigate = useNavigate();
   const isEditing = Boolean(id);
+  const [searchParams] = useSearchParams();
+  const fromFlotsamId = isEditing ? null : searchParams.get("fromFlotsam");
 
   const descriptorFields = useDescriptorFields(true);
   const families = useFamilies(true);
@@ -109,16 +113,48 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
 
+  // Set when arriving via a flotsam item's "Convert to Entry" link --
+  // its title/tags/image prefill the form once a primative type is
+  // picked (see the effect below), and its record gets deleted once the
+  // resulting entry is actually saved.
+  const [sourceFlotsam, setSourceFlotsam] = useState(null);
+  const flotsamApplied = useRef(false);
+
+  useEffect(() => {
+    if (!fromFlotsamId) return;
+    (async () => {
+      const snap = await getDoc(doc(db, "flotsam", fromFlotsamId));
+      if (snap.exists()) setSourceFlotsam({ id: snap.id, ...snap.data() });
+    })();
+  }, [fromFlotsamId]);
+
+  const initialSnapshotRef = useRef(null);
+  function buildSnapshot() {
+    return JSON.stringify({
+      title, notes, link,
+      tags: [...tags].sort(),
+      related: [...related].sort(),
+      descriptorValues,
+      familyIds: [...familyIds].sort(),
+      imageKeys: images.map((img) => img.key),
+    });
+  }
+  if (initialSnapshotRef.current === null && !loadingExisting) {
+    initialSnapshotRef.current = buildSnapshot();
+  }
+  const hasChanges = initialSnapshotRef.current !== null && buildSnapshot() !== initialSnapshotRef.current;
+  const { confirming, attemptClose, resetConfirming } = useGuardedClose(hasChanges);
+
   // If the Info popup is open on top of this form, let its own Escape
   // handler close that first rather than also navigating away here.
   useEffect(() => {
     if (infoOpen) return;
     function onKeyDown(e) {
-      if (e.key === "Escape") navigate(-1);
+      if (e.key === "Escape") attemptClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [infoOpen, navigate]);
+  }, [infoOpen, attemptClose]);
 
   useEffect(() => {
     if (!isEditing) return;
@@ -163,6 +199,23 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
     }
     familyPrefilled.current = true;
   }, [isEditing, id, families]);
+
+  // The flotsam item's title/tags/image only apply once a primative type
+  // is picked -- that's the point at which the rest of the form appears,
+  // so this waits for it rather than prefilling into a hidden form.
+  useEffect(() => {
+    if (!sourceFlotsam || flotsamApplied.current || !descriptorValues.primative) return;
+    flotsamApplied.current = true;
+    setTitle(sourceFlotsam.title || "");
+    setTags(sourceFlotsam.tags || []);
+    if (sourceFlotsam.image?.url) {
+      setImages([{
+        key: sourceFlotsam.image.path || sourceFlotsam.image.url,
+        url: sourceFlotsam.image.url,
+        path: sourceFlotsam.image.path || null,
+      }]);
+    }
+  }, [sourceFlotsam, descriptorValues.primative]);
 
   const tagOptions = useMemo(() => {
     const set = new Set(entries.flatMap((e) => e.tags || []));
@@ -293,6 +346,13 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
 
       await syncFamily(entryId);
 
+      // The image is now owned by the entry doc above (same Storage
+      // path), so only the flotsam record itself is removed here.
+      if (sourceFlotsam) {
+        try { await deleteFlotsamRecord(sourceFlotsam.id); }
+        catch (err) { console.warn("Couldn't remove converted flotsam item:", err.message); }
+      }
+
       navigate(`/entry/${entryId}`);
     } catch (err) {
       setError(`Save failed: ${err.message}`);
@@ -306,7 +366,7 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
         <div className="overlay-bar">
           <h1 className="overlay-title">{isEditing ? "Edit Entry" : "New Entry"}</h1>
           <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
-            Close
+            Cancel
           </button>
         </div>
         <p>Loading…</p>
@@ -324,8 +384,8 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
               {saving ? "Saving…" : "Submit"}
             </button>
           )}
-          <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
-            Close
+          <button type="button" className="overlay-close" onClick={attemptClose} onBlur={resetConfirming}>
+            {confirming ? "Edits will be lost. Continue?" : "Cancel"}
           </button>
         </div>
 

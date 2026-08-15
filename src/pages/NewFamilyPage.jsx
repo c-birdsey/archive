@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase.js";
 import CreatableSelect from "../components/CreatableSelect.jsx";
 import { createFamily, updateFamily } from "../data/families.js";
+import { useGuardedClose } from "../hooks/useGuardedClose.js";
 
 // Hints for LastPass/1Password/Bitwarden/Dashlane/Proton Pass to leave
 // these fields alone -- none of them are logins, but password managers
@@ -29,6 +30,16 @@ export default function NewFamilyPage({ entries, user }) {
   const [error, setError] = useState("");
   const [loadingExisting, setLoadingExisting] = useState(isEditing);
 
+  const initialSnapshotRef = useRef(null);
+  function buildSnapshot() {
+    return JSON.stringify({ name, description, entryIds: [...entryIds].sort() });
+  }
+  if (initialSnapshotRef.current === null && !loadingExisting) {
+    initialSnapshotRef.current = buildSnapshot();
+  }
+  const hasChanges = initialSnapshotRef.current !== null && buildSnapshot() !== initialSnapshotRef.current;
+  const { confirming, attemptClose, resetConfirming } = useGuardedClose(hasChanges);
+
   useEffect(() => {
     if (!isEditing) return;
     (async () => {
@@ -48,11 +59,11 @@ export default function NewFamilyPage({ entries, user }) {
 
   useEffect(() => {
     function onKeyDown(e) {
-      if (e.key === "Escape") navigate(-1);
+      if (e.key === "Escape") attemptClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [navigate]);
+  }, [attemptClose]);
 
   const entryOptions = useMemo(
     () => entries.map((e) => ({ value: e.id, label: e.title })).sort((a, b) => a.label.localeCompare(b.label)),
@@ -91,7 +102,7 @@ export default function NewFamilyPage({ entries, user }) {
         <div className="overlay-bar">
           <h1 className="overlay-title">Edit Family</h1>
           <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
-            Close
+            Cancel
           </button>
         </div>
         <p>Loading…</p>
@@ -107,8 +118,8 @@ export default function NewFamilyPage({ entries, user }) {
           <button type="submit" className="overlay-submit" disabled={saving || !name.trim() || !description.trim()}>
             {saving ? "Saving…" : "Submit"}
           </button>
-          <button type="button" className="overlay-close" onClick={() => navigate(-1)}>
-            Close
+          <button type="button" className="overlay-close" onClick={attemptClose} onBlur={resetConfirming}>
+            {confirming ? "Edits will be lost. Continue?" : "Cancel"}
           </button>
         </div>
 

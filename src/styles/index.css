@@ -75,9 +75,22 @@ a{ color:inherit; }
   padding:32px 32px 100px;
 }
 
+/* Flotsam is deliberately the odd one out -- a lightweight, uncategorized
+   stream rather than the main archive, so the whole page (nav included)
+   inverts to read as a distinct, lower-stakes space. Overriding --ink/--bg
+   here is enough since virtually everything else already colors itself
+   via those variables rather than hardcoded values. */
+.page.page-flotsam{
+  --ink:#fff;
+  --bg:#000;
+  background:var(--bg);
+  color:var(--ink);
+  min-height:100vh;
+}
+
 .wordmark{
-  grid-column:1;
-  justify-self:start;
+  flex-shrink:0;
+  white-space:nowrap;
   font-family:var(--font-serif);
   font-size:14px;
   font-weight:400;
@@ -86,23 +99,25 @@ a{ color:inherit; }
   color:var(--ink);
 }
 
-/* 8-column page grid, reflected in the nav row: Register sits in column 1;
-   Index/Families/Search each get their own column (2/3/4), right-aligned;
-   columns 5-6 are deliberately empty; +Add takes column 7; Info + Sign Out
-   share column 8 as a small right-aligned group. */
+/* Plain left-to-right flex row: Register, then the primary nav close
+   behind it (gap doubled from the nav's own inter-item gap), then
+   +Add/Info/Sign Out pushed to the far right via margin-left:auto on
+   .topbar-right -- not a grid of evenly-spread columns, so nothing ends
+   up stranded looking "centered" in empty middle space. */
 .topbar{
-  display:grid;
-  grid-template-columns:repeat(8, 1fr);
-  column-gap:24px;
+  display:flex;
   align-items:baseline;
   padding-bottom:18px;
   margin-bottom:24px;
 }
 
-.page-nav{ display:contents; }
-.page-nav :nth-child(1){ grid-column:2; justify-self:end; }
-.page-nav :nth-child(2){ grid-column:3; justify-self:end; }
-.page-nav :nth-child(3){ grid-column:4; justify-self:end; }
+.page-nav{
+  flex-shrink:0;
+  margin-left:128px;
+  display:flex;
+  align-items:baseline;
+  gap:64px;
+}
 .page-nav a, .page-nav button{
   background:none;
   border:none;
@@ -111,6 +126,7 @@ a{ color:inherit; }
   font-size:13px;
   color:var(--gray);
   text-decoration:none;
+  white-space:nowrap;
   cursor:pointer;
 }
 .page-nav a:hover, .page-nav button:hover{ color:var(--error); text-decoration:line-through; }
@@ -118,8 +134,7 @@ a{ color:inherit; }
 .page-nav a.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 
 .topbar-signin{
-  grid-column:8;
-  justify-self:end;
+  margin-left:auto;
   background:none;
   border:none;
   padding:0;
@@ -130,11 +145,14 @@ a{ color:inherit; }
 }
 .topbar-signin:hover{ color:var(--error); text-decoration:line-through; }
 
-.topbar-right{ display:contents; }
-.topbar-right > :nth-child(1){ grid-column:7; justify-self:end; }
+.topbar-right{
+  margin-left:auto;
+  flex-shrink:0;
+  display:flex;
+  align-items:baseline;
+  gap:64px;
+}
 .topbar-end-group{
-  grid-column:8;
-  justify-self:end;
   display:flex;
   align-items:center;
   gap:18px;
@@ -144,11 +162,16 @@ a{ color:inherit; }
   font-size:13px;
   color:var(--gray);
   text-decoration:none;
+  white-space:nowrap;
 }
 .topbar-right a:hover{ color:var(--error); text-decoration:line-through; }
 .topbar-right a.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .topbar-right a.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .topbar-right .link-btn{ font-size:13px; }
+
+/* Mobile: Fragments takes the Register corner, and only +Add/Sign Out
+   remain -- everything on one line, nothing wrapping. */
+.topbar-mobile .topbar-right{ gap:24px; }
 
 /* +Add itself is just the hover trigger for the Entry/Family dropdown --
    not a link to anywhere, so it gets the same look as the other topbar
@@ -166,6 +189,7 @@ a{ color:inherit; }
   font-family:var(--font-serif);
   font-size:13px;
   color:var(--gray);
+  white-space:nowrap;
   cursor:pointer;
 }
 .topbar-right button:hover{ color:var(--error); text-decoration:line-through; }
@@ -289,6 +313,9 @@ a{ color:inherit; }
 }
 .overlay-submit:hover{ color:var(--error); text-decoration:line-through; }
 .overlay-submit:disabled{ color:var(--gray-light); cursor:default; }
+/* Bottom-of-form submit only exists for mobile (see @media below) --
+   on desktop the top-right one in .overlay-bar is the only one shown. */
+.overlay-submit-bottom{ display:none; }
 .overlay-close{
   margin-left:auto;
   flex-shrink:0;
@@ -459,6 +486,20 @@ a{ color:inherit; }
 }
 .tile-title{ font-size:13px; color:var(--ink); margin:0; }
 .tile-meta{ font-size:12px; color:var(--gray); margin:2px 0 0; }
+
+/* ---------- flotsam ---------- */
+
+/* Same tile/frame/title treatment as .images-grid (image-tile,
+   image-frame, tile-title, reused directly) -- only the column count
+   differs, so flotsam reads as smaller/denser/less important. */
+.flotsam-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  column-gap:64px;
+  margin-top:64px;
+  row-gap:80px;
+}
+.flotsam-tile-tags{ font-size:11px; color:var(--gray-light); margin:2px 0 0; }
 
 /* ---------- empty state ---------- */
 
@@ -875,6 +916,35 @@ a{ color:inherit; }
   text-align:left;
 }
 
+/* ---------- flotsam detail ---------- */
+/* Same fixed-sidebar idea as .entry-detail, but there's only ever one
+   image so the right column just fills the remaining width instead of
+   the gallery's natural-size/right-aligned/scrolling treatment. */
+.flotsam-detail{
+  display:flex;
+  align-items:flex-start;
+  gap:48px;
+}
+.flotsam-detail-sidebar{
+  position:sticky;
+  top:32px;
+  flex-shrink:0;
+  width:300px;
+}
+.flotsam-detail-tags{ font-size:11px; color:var(--gray); margin:0 0 16px; }
+.flotsam-convert-btn{
+  background:none;
+  border:none;
+  padding:0;
+  font-size:13px;
+  font-family:inherit;
+  color:var(--pink);
+  cursor:pointer;
+}
+.flotsam-convert-btn:hover{ color:var(--error); text-decoration:line-through; }
+.flotsam-detail-image{ flex:1; min-width:0; }
+.flotsam-detail-image img{ display:block; width:100%; height:auto; }
+
 /* ---------- lightbox ---------- */
 
 .lightbox{
@@ -926,23 +996,61 @@ a{ color:inherit; }
 
 .family-detail-header{ margin-bottom:12px; }
 
-/* ---------- lobby / mobile block ---------- */
+/* ---------- mobile ---------- */
+/* Same 900px breakpoint App.jsx uses to restrict routing to Fragments
+   only, so the visual scale-down and the functional restriction always
+   agree. Native form inputs are deliberately left at 16px -- anything
+   smaller makes iOS Safari auto-zoom the page on focus. */
+@media (max-width:900px){
+  .page{ padding:16px 16px 60px; }
+  body{ font-size:11px; }
+  .wordmark{ font-size:12px; }
+  .topbar-mobile{ gap:12px; }
+  .topbar-right a, .topbar-right button, .nav-add-label, .topbar-signin{ font-size:11px; }
 
-.lobby{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:24px;
+  .letter-head{ font-size:20px; }
+  .list-row{ font-size:12px; }
+  .row-author, .row-year{ font-size:11px; }
+
+  .overlay-title, .overlay-submit, .overlay-close{ font-size:15px; }
+  .search-overlay-input{ font-size:16px; }
+  .search-result-row, .family-overlay-row{ font-size:15px; }
+  .filter-indicator .link-btn{ font-size:11px; }
+
+  /* Submit moves from top-right to the bottom of the form, right-aligned
+     under the last field rather than stretched full-width. */
+  .overlay-submit-top{ display:none; }
+  .overlay-submit-bottom{
+    display:block;
+    grid-column:1 / 9;
+    width:fit-content;
+    margin-left:auto;
+    margin-top:8px;
+  }
+
+  .entry-form .field, .entry-form .field > span,
+  .field-label-row span, .asset-empty,
+  .family-field legend{ font-size:13px; }
+  .chip{ font-size:11px; }
+
+  .tile-title{ font-size:11px; }
+  .tile-meta{ font-size:10px; }
+  .flotsam-tile-tags{ font-size:9px; }
+  .flotsam-grid, .images-grid{ grid-template-columns:1fr; row-gap:48px; }
+
+  .detail-heading{ font-size:12px; }
+  .detail-heading-desc{ font-size:10px; }
+  .detail-poster-row, .detail-poster-row .link-btn{ font-size:10px; }
+  .entry-detail-descriptors > div,
+  .entry-detail-inline-field{ font-size:10px; }
+  .flotsam-detail-tags{ font-size:10px; }
+  .flotsam-convert-btn{ font-size:12px; }
+
+  .info-content p{ font-size:15px; }
+  .info-content .info-update{ font-size:10px; }
+  .landing-page .info-content p{ max-width:100%; font-size:13px; }
+  .access-denied-notice{ font-size:14px; }
+  .auth-error{ font-size:11px; }
+  .empty-state{ font-size:12px; }
 }
-.lobby-card{
-  text-align:center;
-  max-width:320px;
-  width:100%;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:16px;
-}
-.lobby-card .wordmark{ font-size:20px; margin-bottom:4px; }
-.mobile-message{ font-size:13px; color:var(--gray); line-height:1.6; }
+

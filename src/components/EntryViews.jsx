@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import LetterGroupedList from "./LetterGroupedList.jsx";
 import { isPdf } from "../data/entries.js";
 import { youtubeThumbnail } from "../data/youtube.js";
@@ -30,7 +31,17 @@ export function ListView({ entries, onOpen }) {
 }
 
 export function ImagesView({ entries, onOpen }) {
-  const sorted = [...entries].sort((a, b) => dateOf(b.createdAt) - dateOf(a.createdAt));
+  // Randomized rather than chronological/alphabetical -- stable across
+  // re-renders within a page load (filters, Firestore updates) via a
+  // per-id weight assigned once and reused, but reshuffles on next
+  // reload since the weight map itself doesn't survive a remount.
+  const weights = useMemo(() => new Map(), []);
+  const sorted = useMemo(() => {
+    for (const e of entries) {
+      if (!weights.has(e.id)) weights.set(e.id, Math.random());
+    }
+    return [...entries].sort((a, b) => weights.get(a.id) - weights.get(b.id));
+  }, [entries, weights]);
   return (
     <main className="images-grid">
       {sorted.map((entry) => {
@@ -55,7 +66,7 @@ export function ImagesView({ entries, onOpen }) {
               </div>
             )}
             <p className="tile-title">{entry.title}</p>
-            <p className="tile-meta">{yearOf(entry.createdAt)}</p>
+            <p className="tile-meta">{entry.descriptors?.year || ""}</p>
           </button>
         );
       })}

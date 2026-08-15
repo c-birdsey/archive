@@ -10,12 +10,13 @@ export default function TopNav({
   infoActive,
   onFamiliesClick,
   familiesActive,
+  mobile = false,
 }) {
   const location = useLocation();
   // Active either while the Families overlay is open, or while viewing a
   // specific family's (still routed) detail page.
   const familiesIsActive = familiesActive || location.pathname.startsWith("/family/");
-  const addIsActive = location.pathname === "/new" || location.pathname === "/new-family";
+  const addIsActive = location.pathname === "/new" || location.pathname === "/new-family" || location.pathname === "/flotsam/new";
 
   if (signedOut) {
     return (
@@ -26,6 +27,29 @@ export default function TopNav({
         <button type="button" className="topbar-signin" onClick={onSignInClick}>
           Sign In
         </button>
+      </header>
+    );
+  }
+
+  // Mobile is restricted to Fragments only, so the whole header is its
+  // own simpler layout rather than a subset of the desktop one -- no
+  // Register wordmark (Fragments takes that corner instead), no
+  // Index/Families/Search/Info, and no hover-dropdown (hover doesn't
+  // exist on touch).
+  if (mobile) {
+    return (
+      <header className="topbar topbar-mobile">
+        <NavLink to="/flotsam" className="wordmark" end>
+          Fragments
+        </NavLink>
+        <div className="topbar-right">
+          <NavLink to="/flotsam/new" className={({ isActive }) => (isActive ? "active" : "")}>
+            +Add
+          </NavLink>
+          <button type="button" onClick={() => signOut(auth)}>
+            Sign Out
+          </button>
+        </div>
       </header>
     );
   }
@@ -43,6 +67,9 @@ export default function TopNav({
         <button type="button" className={familiesIsActive ? "active" : ""} onClick={onFamiliesClick}>
           Families
         </button>
+        <NavLink to="/flotsam" className={({ isActive }) => (isActive ? "active" : "")}>
+          Fragments
+        </NavLink>
         <button type="button" onClick={onSearchClick}>
           Search
         </button>
@@ -57,6 +84,9 @@ export default function TopNav({
             </NavLink>
             <NavLink to="/new-family" className={({ isActive }) => (isActive ? "active" : "")}>
               Family
+            </NavLink>
+            <NavLink to="/flotsam/new" className={({ isActive }) => (isActive ? "active" : "")}>
+              Fragment
             </NavLink>
           </div>
         </div>
