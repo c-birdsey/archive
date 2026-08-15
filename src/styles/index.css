@@ -316,13 +316,15 @@ a{ color:inherit; }
   padding:0;
   font-size:20px;
   font-family:inherit;
+  font-weight:400;
   color:var(--pink);
   cursor:pointer;
 }
 .overlay-submit:hover{ color:var(--error); text-decoration:line-through; }
 .overlay-submit:disabled{ color:var(--gray-light); cursor:default; }
-/* Bottom-of-form submit only exists for mobile (see @media below) --
-   on desktop the top-right one in .overlay-bar is the only one shown. */
+/* NewFlotsamPage also renders a second submit at the bottom of the form
+   (.overlay-submit-bottom) for markup-order reasons, but the top-right
+   one in .overlay-bar is always the one shown, on every screen size. */
 .overlay-submit-bottom{ display:none; }
 .overlay-close{
   margin-left:auto;
@@ -1020,21 +1022,16 @@ a{ color:inherit; }
   .list-row{ font-size:12px; }
   .row-author, .row-year{ font-size:11px; }
 
+  /* .flotsam-detail is a fixed-300px-sidebar + flex:1 image row on
+     desktop -- on a narrow mobile viewport that pushes the image off
+     the right edge instead of shrinking it, so stack them instead. */
+  .flotsam-detail{ flex-direction:column; gap:24px; }
+  .flotsam-detail-sidebar{ position:static; width:auto; }
+
   .overlay-title, .overlay-submit, .overlay-close{ font-size:15px; }
   .search-overlay-input{ font-size:16px; }
   .search-result-row, .family-overlay-row{ font-size:15px; }
   .filter-indicator .link-btn{ font-size:11px; }
-
-  /* Submit moves from top-right to the bottom of the form, right-aligned
-     under the last field rather than stretched full-width. */
-  .overlay-submit-top{ display:none; }
-  .overlay-submit-bottom{
-    display:block;
-    grid-column:1 / 9;
-    width:fit-content;
-    margin-left:auto;
-    margin-top:8px;
-  }
 
   .entry-form .field, .entry-form .field > span,
   .field-label-row span, .asset-empty,

@@ -112,13 +112,17 @@ export default function App() {
         familiesActive={overlay === "families"}
       />
       <Routes>
-        <Route
-          path="/"
-          element={<LandingPage showExploreLinks onFamiliesClick={() => setOverlay("families")} />}
-        />
+        {isMobile ? (
+          <Route path="/" element={<Navigate to="/flotsam" replace />} />
+        ) : (
+          <Route
+            path="/"
+            element={<LandingPage showExploreLinks onFamiliesClick={() => setOverlay("families")} />}
+          />
+        )}
         <Route path="/flotsam" element={<FlotsamPage flotsam={flotsam} />} />
         <Route path="/flotsam/new" element={<NewFlotsamPage entries={entries} flotsam={flotsam} user={user} mobile={isMobile} />} />
-        <Route path="/flotsam/:id" element={<FlotsamDetailPage flotsam={flotsam} />} />
+        <Route path="/flotsam/:id" element={<FlotsamDetailPage flotsam={flotsam} mobile={isMobile} />} />
         <Route path="/flotsam/:id/edit" element={<NewFlotsamPage entries={entries} flotsam={flotsam} user={user} mobile={isMobile} />} />
         {/* Everything below is desktop-only -- on mobile, the whole
             archive (Index/Families/Entries) is off-limits and any of

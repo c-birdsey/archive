@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { deleteFlotsam } from "../data/flotsam.js";
 
-export default function FlotsamDetailPage({ flotsam }) {
+export default function FlotsamDetailPage({ flotsam, mobile = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
@@ -51,13 +51,15 @@ export default function FlotsamDetailPage({ flotsam }) {
           <p className="flotsam-detail-tags">{item.tags.join(", ")}</p>
         )}
 
-        <button
-          type="button"
-          className="flotsam-convert-btn"
-          onClick={() => navigate(`/new?fromFlotsam=${item.id}`)}
-        >
-          Convert to Entry
-        </button>
+        {!mobile && (
+          <button
+            type="button"
+            className="flotsam-convert-btn"
+            onClick={() => navigate(`/new?fromFlotsam=${item.id}`)}
+          >
+            Convert to Entry
+          </button>
+        )}
       </aside>
 
       <div className="flotsam-detail-image">
