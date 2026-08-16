@@ -65,8 +65,9 @@ export default function EntryDetailPage({ entries, user }) {
 
   const descriptorLabel = (key) => descriptorFields.find((f) => f.key === key)?.label || key;
   // Publication/Source is only still editable (in the New Entry form) for
-  // Discursive entries -- written works, where it's typically a URL to the
-  // source text. Physical/Representational entries no longer collect it,
+  // Discursive entries -- written works. It's a plain text field (e.g. a
+  // publication name), not a URL, so it renders as text like any other
+  // descriptor. Physical/Representational entries no longer collect it,
   // so don't surface it here even if an older entry still carries a value.
   // Firestore doesn't guarantee map-field key order is stable across reads,
   // so this list would otherwise visibly reshuffle on every load/refresh --
@@ -165,9 +166,16 @@ export default function EntryDetailPage({ entries, user }) {
                 <dt>{descriptorLabel(key)}</dt>
                 <dd>
                   {Array.isArray(value) ? (
-                    value.join(", ")
-                  ) : key === "source" ? (
-                    <a href={value} target="_blank" rel="noopener noreferrer">{value}</a>
+                    value.map((v, i) => (
+                      <span key={v}>
+                        {i > 0 && ", "}
+                        {FILTERABLE_DESCRIPTOR_KEYS.has(key) ? (
+                          <Link to={`/index?d=${encodeURIComponent(key)}:${encodeURIComponent(v)}`}>{v}</Link>
+                        ) : (
+                          v
+                        )}
+                      </span>
+                    ))
                   ) : FILTERABLE_DESCRIPTOR_KEYS.has(key) ? (
                     <Link to={`/index?d=${encodeURIComponent(key)}:${encodeURIComponent(value)}`}>{value}</Link>
                   ) : (

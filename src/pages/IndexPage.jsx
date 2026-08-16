@@ -55,7 +55,10 @@ export default function IndexPage({ entries }) {
       key,
       label: filterLabelFor(key, descriptorFields),
       values: [...new Set(
-        entries.map((e) => e.descriptors?.[key]).filter(Boolean)
+        entries.flatMap((e) => {
+          const v = e.descriptors?.[key];
+          return Array.isArray(v) ? v : v ? [v] : [];
+        })
       )].sort(),
     }));
   }, [entries, descriptorFields]);

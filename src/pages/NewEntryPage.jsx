@@ -34,7 +34,7 @@ const FIELD_PLACEHOLDERS = {
   year: "YYYY",
   project: "Project",
   collaborator: "Name(s)",
-  source: "URL",
+  source: "Publication",
   location: "Municipality, Country",
 };
 
@@ -86,6 +86,12 @@ function buildFieldRow(primative, descriptorFields) {
 // (CreatableSelect), prepopulated with values already used across other
 // entries, instead of a plain text input.
 const AUTOCOMPLETE_KEYS = new Set(["author", "project"]);
+
+// Author is the one autocomplete field that allows more than one value at
+// once (a piece can have several credited authors) -- stored as a string
+// array on descriptors.author, same convention as MULTI_CHOICE_KEYS above.
+// Project stays single-select.
+const MULTI_AUTOCOMPLETE_KEYS = new Set(["author"]);
 
 export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const { id } = useParams(); // present when editing
@@ -185,10 +191,13 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
       setTags(data.tags || []);
       setRelated(data.relatedIds || []);
       const descriptors = { ...(data.descriptors || {}) };
-      // Older entries stored a single medium string -- wrap it so the
-      // multi-select choice list above reads it correctly.
+      // Older entries stored a single medium/author string -- wrap it so
+      // the multi-select fields above read it correctly.
       if (descriptors.medium && !Array.isArray(descriptors.medium)) {
         descriptors.medium = [descriptors.medium];
+      }
+      if (descriptors.author && !Array.isArray(descriptors.author)) {
+        descriptors.author = [descriptors.author];
       }
       setDescriptorValues(descriptors);
 
@@ -262,7 +271,10 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
   const descriptorOptions = useMemo(() => {
     const map = {};
     for (const key of AUTOCOMPLETE_KEYS) {
-      const set = new Set(entries.map((e) => e.descriptors?.[key]).filter(Boolean));
+      const set = new Set(entries.flatMap((e) => {
+        const v = e.descriptors?.[key];
+        return Array.isArray(v) ? v : v ? [v] : [];
+      }));
       map[key] = [...set].sort().map((v) => ({ value: v, label: v }));
     }
     return map;
@@ -496,13 +508,24 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
                 ) : AUTOCOMPLETE_KEYS.has(f.key) ? (
                   <div className="field" key={f.key}>
                     <span>{f.label}</span>
-                    <CreatableSelect
-                      options={descriptorOptions[f.key] || []}
-                      selected={descriptorValues[f.key] ? [descriptorValues[f.key]] : []}
-                      onChange={(vals) => setDescriptorValues((d) => ({ ...d, [f.key]: vals[0] || "" }))}
-                      allowCreate
-                      placeholder={FIELD_PLACEHOLDERS[f.key] || f.label}
-                    />
+                    {MULTI_AUTOCOMPLETE_KEYS.has(f.key) ? (
+                      <CreatableSelect
+                        options={descriptorOptions[f.key] || []}
+                        selected={descriptorValues[f.key] || []}
+                        onChange={(vals) => setDescriptorValues((d) => ({ ...d, [f.key]: vals }))}
+                        multiple
+                        allowCreate
+                        placeholder={FIELD_PLACEHOLDERS[f.key] || f.label}
+                      />
+                    ) : (
+                      <CreatableSelect
+                        options={descriptorOptions[f.key] || []}
+                        selected={descriptorValues[f.key] ? [descriptorValues[f.key]] : []}
+                        onChange={(vals) => setDescriptorValues((d) => ({ ...d, [f.key]: vals[0] || "" }))}
+                        allowCreate
+                        placeholder={FIELD_PLACEHOLDERS[f.key] || f.label}
+                      />
+                    )}
                   </div>
                 ) : (
                   <label className="field" key={f.key}>
