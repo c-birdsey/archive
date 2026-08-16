@@ -15,6 +15,7 @@ function parseFilterParam(raw) {
 
 export default function IndexPage({ entries }) {
   const [view, setView] = useState("images");
+  const [chronological, setChronological] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -137,6 +138,17 @@ export default function IndexPage({ entries }) {
           >
             Grid
           </button>
+          {view === "images" && (
+            <>
+              <span className="nav-sep">|</span>
+              <button
+                className={chronological ? "active" : ""}
+                onClick={() => setChronological((c) => !c)}
+              >
+                {chronological ? "Unsort" : "Sort"}
+              </button>
+            </>
+          )}
         </div>
       </nav>
 
@@ -187,7 +199,11 @@ export default function IndexPage({ entries }) {
       ) : view === "list" ? (
         <ListView entries={visible} onOpen={(id) => navigate(`/entry/${id}`)} />
       ) : (
-        <ImagesView entries={visible} onOpen={(id) => navigate(`/entry/${id}`)} />
+        <ImagesView
+          entries={visible}
+          onOpen={(id) => navigate(`/entry/${id}`)}
+          chronological={chronological}
+        />
       )}
     </>
   );

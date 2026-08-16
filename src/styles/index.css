@@ -260,6 +260,7 @@ a{ color:inherit; }
 .nav-group button:hover{ color:var(--error); text-decoration:line-through; }
 .nav-group button.active{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
 .nav-group button.active:hover{ color:var(--ink); text-decoration:underline; text-underline-offset:3px; }
+.nav-sep{ font-size:11px; color:var(--gray-light); }
 
 .filter-indicator{ font-size:11px; color:var(--gray); margin:0; }
 .navrow .link-btn{ font-size:11px; }

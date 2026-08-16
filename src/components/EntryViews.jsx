@@ -31,18 +31,22 @@ export function ListView({ entries, onOpen }) {
   );
 }
 
-export function ImagesView({ entries, onOpen }) {
-  // Randomized rather than chronological/alphabetical -- stable across
-  // re-renders within a page load (filters, Firestore updates) via a
-  // per-id weight assigned once and reused, but reshuffles on next
-  // reload since the weight map itself doesn't survive a remount.
+export function ImagesView({ entries, onOpen, chronological = false }) {
+  // Default order is randomized rather than chronological/alphabetical --
+  // stable across re-renders within a page load (filters, Firestore
+  // updates) via a per-id weight assigned once and reused, but reshuffles
+  // on next reload since the weight map itself doesn't survive a remount.
+  // "Sort" switches to newest-first by creation time instead.
   const weights = useMemo(() => new Map(), []);
   const sorted = useMemo(() => {
+    if (chronological) {
+      return [...entries].sort((a, b) => dateOf(b.createdAt) - dateOf(a.createdAt));
+    }
     for (const e of entries) {
       if (!weights.has(e.id)) weights.set(e.id, Math.random());
     }
     return [...entries].sort((a, b) => weights.get(a.id) - weights.get(b.id));
-  }, [entries, weights]);
+  }, [entries, weights, chronological]);
   return (
     <main className="images-grid">
       {sorted.map((entry) => {
