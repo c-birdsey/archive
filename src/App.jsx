@@ -22,6 +22,7 @@ import EntryDetailPage from "./pages/EntryDetailPage.jsx";
 import FlotsamPage from "./pages/FlotsamPage.jsx";
 import FlotsamDetailPage from "./pages/FlotsamDetailPage.jsx";
 import NewFlotsamPage from "./pages/NewFlotsamPage.jsx";
+import NetworkPage from "./pages/NetworkPage.jsx";
 import DebugPage from "./pages/DebugPage.jsx";
 
 const MOBILE_BREAKPOINT = 900;
@@ -100,11 +101,13 @@ export default function App() {
   // overlay form, since the semi-transparent .overlay background assumes
   // a light page underneath it.
   const isFlotsam = /^\/flotsam(\/[^/]+)?$/.test(location.pathname) && location.pathname !== "/flotsam/new";
+  const isNetwork = location.pathname === "/network";
 
   return (
-    <div className={isFlotsam ? "page page-flotsam" : "page"}>
+    <div className={isFlotsam ? "page page-flotsam" : isNetwork ? "page page-network" : "page"}>
       <TopNav
         mobile={isMobile}
+        network={isNetwork}
         onSearchClick={() => setOverlay("search")}
         onInfoClick={() => setOverlay("info")}
         infoActive={overlay === "info"}
@@ -141,6 +144,7 @@ export default function App() {
             <Route path="/family/:id/edit" element={<NewFamilyPage entries={entries} user={user} />} />
             <Route path="/entry/:id" element={<EntryDetailPage entries={entries} user={user} />} />
             <Route path="/entry/:id/edit" element={<NewEntryPage entries={entries} user={user} onInfoClick={() => setOverlay("info")} infoOpen={overlay === "info"} />} />
+            <Route path="/network" element={<NetworkPage entries={entries} families={families} />} />
             <Route path="/__debug" element={<DebugPage user={user} />} />
           </>
         )}

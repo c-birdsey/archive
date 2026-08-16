@@ -421,7 +421,7 @@ export default function NewEntryPage({ entries, user, onInfoClick, infoOpen }) {
           <h1 className="overlay-title">{isEditing ? "Edit Entry" : "New Entry"}</h1>
           {descriptorValues.primative && (
             <button type="submit" className="overlay-submit" disabled={saving || !title.trim()}>
-              {saving ? "Saving…" : "Submit"}
+              {saving ? "Saving…" : isEditing ? "Update" : "Submit"}
             </button>
           )}
           <button type="button" className="overlay-close" onClick={attemptClose} onBlur={resetConfirming}>

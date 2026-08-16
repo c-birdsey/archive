@@ -11,6 +11,7 @@ export default function TopNav({
   onFamiliesClick,
   familiesActive,
   mobile = false,
+  network = false,
 }) {
   const location = useLocation();
   // Active either while the Families overlay is open, or while viewing a
@@ -27,6 +28,21 @@ export default function TopNav({
         <button type="button" className="topbar-signin" onClick={onSignInClick}>
           Sign In
         </button>
+      </header>
+    );
+  }
+
+  // The Network page is deliberately its own pared-down space -- none of
+  // Index/Families/Fragments/+Add/Info/Sign Out apply there. It has its
+  // own Search and (i) info controls (see NetworkPage.jsx), and getting
+  // back to the rest of the app -- including signing out -- is just the
+  // wordmark away.
+  if (network) {
+    return (
+      <header className="topbar">
+        <NavLink to="/" className="wordmark" end>
+          Register
+        </NavLink>
       </header>
     );
   }

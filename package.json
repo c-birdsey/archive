@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "d3-force": "^3.0.0",
+    "d3-selection": "^3.0.0",
+    "d3-zoom": "^3.0.0",
     "firebase": "^11.0.0",
     "pdfjs-dist": "^4.10.38",
     "react": "^18.3.0",

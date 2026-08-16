@@ -15,7 +15,7 @@ export default function LandingPage({ showExploreLinks = false, notice = null, o
               <button type="button" className="link-btn landing-inline-link" onClick={onFamiliesClick}>
                 Families
               </button>
-              .
+              , or as a <Link to="/network">Network</Link>.
             </>
           )}
         </p>
