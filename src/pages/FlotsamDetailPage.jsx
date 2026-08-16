@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { deleteFlotsam } from "../data/flotsam.js";
+import Lightbox from "../components/Lightbox.jsx";
 
 export default function FlotsamDetailPage({ flotsam, mobile = false }) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [deleting, setDeleting] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const item = flotsam.find((f) => f.id === id);
 
@@ -62,9 +64,20 @@ export default function FlotsamDetailPage({ flotsam, mobile = false }) {
         )}
       </aside>
 
-      <div className="flotsam-detail-image">
+      <button
+        type="button"
+        className="flotsam-detail-image"
+        onClick={() => setLightboxOpen(true)}
+      >
         <img src={item.image?.url} alt="" />
-      </div>
+      </button>
+
+      <Lightbox
+        images={item.image ? [item.image] : []}
+        index={lightboxOpen ? 0 : null}
+        onClose={() => setLightboxOpen(false)}
+        onNavigate={() => {}}
+      />
     </div>
   );
 }

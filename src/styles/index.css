@@ -95,6 +95,13 @@ a{ color:inherit; }
   --bg:#fff;
   color:var(--ink);
 }
+/* Same reasoning as .overlay above -- the lightbox has its own near-white
+   background regardless of the inverted page underneath, so its controls
+   need the normal light-theme --ink, not the page's inverted white. */
+.page-flotsam .lightbox{
+  --ink:#111;
+  --bg:#fff;
+}
 
 .wordmark{
   flex-shrink:0;
@@ -971,7 +978,7 @@ a{ color:inherit; }
   cursor:pointer;
 }
 .flotsam-convert-btn:hover{ color:var(--error); text-decoration:line-through; }
-.flotsam-detail-image{ flex:1; min-width:0; }
+.flotsam-detail-image{ flex:1; min-width:0; display:block; background:none; border:none; padding:0; cursor:pointer; text-align:left; }
 .flotsam-detail-image img{ display:block; width:100%; height:auto; }
 
 /* ---------- lightbox ---------- */

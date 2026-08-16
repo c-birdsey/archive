@@ -25,7 +25,7 @@ export default function InfoOverlay({ open, onClose }) {
 
       <div className="info-content">
         <p>
-          Register is an architectural archive for tracing a graphic record of
+          Register is an architectural archive intended as a tool for tracing graphic records of
           ideas and and unconscious references. It is structured with
           minimal hierarchy, instead focusing on connections between and across
           authors and entries.
@@ -34,22 +34,25 @@ export default function InfoOverlay({ open, onClose }) {
           Entries are classified into three primitive types: physical, comprising constructed 
           things (buildings, sculptures, landscapes); representational, comprising descriptive 
           things (drawings, models, renderings); and discursive, comprising analytical things 
-          (essays, lectures, arguments).
+          (essays, lectures, publications).
         </p>
         <p>
-          Each entry requires a set of objective descriptors — empirical
+          Each entry is composed of a set of objective descriptors — empirical
           fields that relate to the source of the entry — and subjective
-          designations — intuitive and impressionistic fields that trace
+          qualifiers — intuitive and impressionistic fields that trace
           internal interests and associations. The
           descriptors allow for the ordered parsing of the archive, while the
-          designations build relationships across otherwise unrelated ideas.
+          qualifiers build relationships across ideas.
           Entries can be directly linked to other entries, or added to
-          collections, called families. 
+          collections, called families.
+        </p>
+        <p>Fragments are predecessors to entries; partial ideas and field observations without the complete 
+          metadata required for an entry. This data type is effectively reactive and instinctual.
         </p>
         <p>
           Register is organized by Calder Birdsey and Thomas Chen. Published July 2026. 
         </p>
-        <p className="info-update">Updated 08/13/2026</p>
+        <p className="info-update">Updated 26_0815</p>
       </div>
     </div>
   );
